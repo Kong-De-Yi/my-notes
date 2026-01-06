@@ -22,7 +22,7 @@
 
 ```html
 <script>
-  javascript代码;
+  alert("Hello,world!");
 </script>
 ```
 
