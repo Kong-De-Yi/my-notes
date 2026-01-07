@@ -105,6 +105,8 @@ let color = COLOR_RED;
 ```javascript
 let n = 123;
 n = 12.345;
+alert(Infinity);
+alert(NaN + 1);
 ```
 
 - 支持运算+、-、\*、/
@@ -125,7 +127,7 @@ const bigInt = 12345n;
 ```javascript
 let str = "Hello"; //双引号
 let str = "Single quotes are ok too"; //单引号
-//反引号(嵌入变量和表达式)
+//反引号(用 ${} 嵌入变量和表达式)
 let phrase = `can embed another ${str}`;
 let result = `result is ${a + b}`;
 ```
@@ -153,9 +155,9 @@ let age;
 alert(age); //结果是undefined
 ```
 
-## Object：存储数据集合和复杂实体
-
 ## Symbol：对象的唯一标识符
+
+## Object：存储数据集合和复杂实体
 
 ## typeof 运算符：字符串形式返回参数的数据类型
 
@@ -171,6 +173,7 @@ typeof null; //返回"object"(语言遗留错误)
 typeof alert; //返回"function"(实际是object)
 ```
 
+- typeof 是运算符，不是函数
 - 另一种习惯写法：typeof(x)
 
 # 用户交互
@@ -220,11 +223,10 @@ let str = "123";
 let num = Number(str); //123
 ```
 
-- 非有效数字转换为 NaN
+- 非有效数字->NaN
 - undefined->NaN
 - null->0
-- true->1
-- false->0
+- true / false->1 / 0
 - ""->0
 - string=>number 或者 NaN
 
@@ -240,6 +242,7 @@ let num = Number(str); //123
 - 一元运算符
 - 二元运算符
 - 同一个符号可以表征不同的运算符，如减号-，取决于运算元的个数和类型
+- 所有的运算符都有返回值
 
 ## 数学运算
 
@@ -274,12 +277,18 @@ let result=+true;  //1
 let result=+"";  //0
 let apples='2';
 let oranges='3';
-let total=+apples++oranges;  //5，等效于let total=Number(apples)+Numbe(oranges)
+let total=+apples++oranges;  //5，等效于let total=Number(apples)+Number(oranges)
 ```
 
-## 运算符优先级：一元高于二元
+## 运算符优先级：
+
+- （）拥有最高优先级
+- 一元高于二元
+- [运算符优先级汇总表](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Operator_precedence#%E6%B1%87%E6%80%BB%E8%A1%A8)
 
 ## 赋值运算符：=
+
+- 优先级为 2
 
 - 有返回值
 
@@ -293,6 +302,8 @@ a = b = c = 2 + 2; //链式赋值
 ```
 
 ## 增强赋值运算符：+=、-=、\*=、/= ...
+
+- 优先级为 2
 
 ```javascript
 let n = 2;
@@ -335,8 +346,6 @@ for(a=1,b=3,c=a*b;a<10;a++){...}
 - 在<、>、<=、>=中 null->0，undefined->NaN
 - null 与 undefined 在==中不做类型转换，除了互等，不等于任何值
 
-- **相等性检查 == 和普通比较符 >、<、>=、<=的代码逻辑是相互独立的**
-
 ```javascript
 null === undefined; //false
 null == undefined; //true
@@ -346,7 +355,7 @@ null == undefined; //true
 
 - 运算元可以为任意类型（自动转为 boolean)，结果也可以是任意类型
 
-## 逻辑或：||
+## 逻辑或：||（寻找第一个真值)
 
 ```javascript
 result = value1 || value2 || value3;
@@ -376,16 +385,16 @@ alert(firstName || lastName || nickName || "Anonymous"); //SuperCoder
 
 ```javascript
 true || alert("not printed"); //不会运行alert
-false || alert("printed");
+false || alert("printed"); //运行alert
 ```
 
-## 逻辑与：&&
+## 逻辑与：&&（寻找第一个假值)
 
 ```javascript
 result = value1 && value2 && value3;
 ```
 
-- 从左至右计算操作数并转为 boolean，遇到 false 就停止计算并返回操作数的初始值,没有遇到就返回最后一个操作数（始终返回操作数的初始形式）
+- 从左至右计算操作数并转为 boolean，遇到 false 就**停止计算**并返回操作数的**初始值**,没有遇到就返回最后一个操作数（始终返回操作数的初始形式）
 
 ```javascript
 alert(1 && 0); //0
@@ -424,9 +433,13 @@ alert(!!null); //false
 result = a ?? b;
 ```
 
-- 如果 a !== null && a !== undefined，返回 a,否则返回 b
+- 如果 a 不为 null/undefined，返回 a,否则返回 b
 - 常见用法：
-  1. 提供默认值
+  - 提供默认值
+  - 从一系列值中选出第一个非 null/undefined 的值
+  - 与 || 的区别，|| 无法返回第一个参数中的(false、0、空字符串)
+  - 与 || 相同的优先级（3），需要加括号
+  - 禁止与&&、||一起使用，除非用括号
 
 ```javascript
 let user;
@@ -437,14 +450,26 @@ alert(user ?? "匿名"); //John
 let firstName = null;
 let lastName = null;
 let nickName = "Supercoder";
+//显示第一个已定义的值
 alert(firstName ?? lastName ?? nickName ?? "匿名"); //Supercoder
+
+let height = 0;
+alert(height || 100); //返回100
+alert(height ?? 100); //返回0
+
+let height = null;
+let width = null;
+let area = (height ?? 100) * (width ?? 50);//需要括号
+
+let x=1 && 2 ?? 3;//语法错误
+let x=(1 && 2) ?? 3;//正常工作
 ```
 
 # 条件分支：if 和'?'
 
 ## "if"语句
 
-- 布尔转换：会将括号内的表达式结果转换成 boolean
+- 计算括号内的表达式并将结果转换成 boolean，为 true 则执行对应代码块
 - 多个条件"else if"
 - "else"语句：可选
 
@@ -483,3 +508,65 @@ alert(message);
 let company=prompt("Which company created Javascript?","");
 company=="Netscape" ? alert("Right") : alert("Wrong");
 ```
+
+# 循环：while 和 for
+
+## "while" 循环
+
+- 语法：
+
+```javascript
+while (condition) {
+  //循环体代码
+}
+```
+
+- condition 可为任何表达式或变量
+- 逻辑：计算 condition，将结果转换为 boolean， 为 true 时,执行循环体 code
+
+## "do...while"循环
+
+- 语法：
+
+```javascript
+do {
+  //循环体代码
+} while (condtion);
+```
+
+- 循环体至少执行一次
+
+## "for"循环
+
+- 语法：
+
+```javascript
+for (begin; condition; step) {
+  //body（循环体）
+}
+```
+
+- begin：进入循环前执行一次，可为内联变量（可以省略）
+- condition：每次循环迭代之前检查，为 false 则停止循环（可以省略）
+- body:condition 为 true 时，重复执行
+- stp：每次循环迭代之后执行（可以省略）
+
+```javascript
+//i为内联变量，只在循环中可见
+for (let i = 0; i < 3; i++) {
+  alert(i);
+}
+alert(i); //错误，变量未声明
+
+//使用现有变量
+let i = null;
+for (i = 0; i < 3; i++) {
+  alert(i);
+}
+
+for (;;) {
+  //无限循环
+}
+```
+
+## 跳出循环
