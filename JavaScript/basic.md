@@ -509,6 +509,81 @@ let company=prompt("Which company created Javascript?","");
 company=="Netscape" ? alert("Right") : alert("Wrong");
 ```
 
+## "switch"语句
+
+- 替代多个 if 判断
+- 至少一个 case,default 可选
+- swich/case 参数可以是任何表达式
+
+```javascript
+switch(x){
+  case 'value1'://if(x==='value1')
+    ...
+    [break]
+  case 'value2'://if(x==='value2')
+    ...
+    [break]
+  default:
+    ...
+    [break]
+}
+```
+
+- 执行逻辑：从上往下检查 x 与 case 后的值是否**严格相等**，相等则执行 case 下的代码块，遇到 break 则结束整个 switch，没有相等的 case，则执行 default 下的代码块
+- 如果没有 break,程序将**不经过任何检查**继续执行下一个 case
+
+```javascript
+//程序连续执行
+//alert("Exactly!");
+//alert("Too big");
+//alert("I don't know such values");
+let a = 2 + 2;
+switch (a) {
+  case 3:
+    alert("Too small");
+  case 4:
+    alert("Exactly!");
+  case 5:
+    alert("Too big");
+  default:
+    alert("I don't know such values");
+}
+
+//"case"分组
+let a = 3;
+switch (a) {
+  case 4:
+    alert("Right!");
+    break;
+  //下面这两个case被分在一组
+  case 3:
+  case 5:
+    alert("Wrong!");
+    alert("Why don't you take a math class?");
+    break;
+  default:
+    alert("The result is strange.Really.");
+}
+
+//类型很关键
+let arg = prompt("Enter a value?");
+switch (arg) {
+  case "0":
+  case "1":
+    alert("One or zero");
+    break;
+  case "2":
+    alert("Two");
+    break;
+  //"3" !== 3,case 3不会执行
+  case 3:
+    alert("Never executes!");
+    break;
+  default:
+    alert("An unknown value");
+}
+```
+
 # 循环：while 和 for
 
 ## "while" 循环
@@ -569,4 +644,59 @@ for (;;) {
 }
 ```
 
-## 跳出循环
+## "break"结束整个循环
+
+- 在循环体中间进行条件检查
+
+```javascript
+let sum = 0;
+while (true) {
+  let value = +prompt("Enter a number", "");
+  //输入内容不是数字时结束循环
+  if (!value) break;
+  sum += value;
+}
+alert(`Sum:${sum}`);
+```
+
+## "continue"结束当前循环
+
+- 停止当前这一次迭代，启动新一轮循环
+- 有利于减少循环体中的嵌套
+
+```javascript
+for (let i = 0; i < 10; i++) {
+  //条件为真，跳过当前循环剩余部分，立即进入下一轮迭代
+  if (i % 2 == 0) continue;
+  alert(i);
+}
+```
+
+- 三元运算符"?"右边禁止出现 break/continue
+
+```javascript
+i > 5 ? alert(i) : continue;//语法错误
+```
+
+## break/continue 标签
+
+- 跳出多层嵌套循环
+
+```javascript
+labelName: for (;;) {
+  for (;;) {
+    break labelName; //向上寻找labelName标签，并结束整个标签循环
+    continue labelName; //向上寻找labelName标签，并跳转到标签循环的下一次迭代
+  }
+}
+```
+
+- 标签必须在 break/continue 语句上方
+- break 必须在代码块内
+- continue 必须在循环代码块内
+
+```javascript
+label: {
+  break label; //有效
+}
+```
