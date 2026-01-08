@@ -35,10 +35,19 @@
 # 代码结构
 
 - 语句（分号分隔）：
+- 代码块后不需要加分号
 
 ```javascript
 alert("Hello");
 alert("World");
+
+function f() {
+  //函数声明后不需要加分号
+}
+
+for (;;) {
+  //循环语句后不需要加分号
+}
 ```
 
 - 注释
@@ -901,7 +910,7 @@ let welcome = age < 18 ? () => alert("Hello") : () => alert("Greetings!");
 welcome();
 ```
 
-- 多行语法：使用花括号，用 return 显示返回
+- 多行语法：使用花括号，用 return 显式返回
 
 ```javascript
 let sum = (a, b) => {
