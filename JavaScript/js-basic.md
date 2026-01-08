@@ -357,9 +357,7 @@ null == undefined; //true
 
 ## 逻辑或：||（寻找第一个真值)
 
-```javascript
-result = value1 || value2 || value3;
-```
+- 语法：`result = value1 || value2 || value3;`
 
 - 从左至右计算操作数并转为 boolean，遇到 true 就**停止计算**并返回操作数的**初始值**,没有遇到就返回最后一个操作数（始终返回操作数的初始形式）
 
@@ -390,9 +388,7 @@ false || alert("printed"); //运行alert
 
 ## 逻辑与：&&（寻找第一个假值)
 
-```javascript
-result = value1 && value2 && value3;
-```
+- 语法：`result = value1 && value2 && value3;`
 
 - 从左至右计算操作数并转为 boolean，遇到 false 就**停止计算**并返回操作数的**初始值**,没有遇到就返回最后一个操作数（始终返回操作数的初始形式）
 
@@ -406,9 +402,7 @@ alert(1 && 2 && null && 3); //null
 
 ## 逻辑非：！
 
-```javascript
-result = !value;
-```
+- 语法：`result = !value;`
 
 - 将操作数转为 boolean，并返回相反的值
 
@@ -429,9 +423,7 @@ alert(!!null); //false
 
 ## 空值合并运算符：??
 
-```javascript
-result = a ?? b;
-```
+- 语法：`result = a ?? b;`
 
 - 如果 a 不为 null/undefined，返回 a,否则返回 b
 - 常见用法：
@@ -489,11 +481,7 @@ if (year < 2015) {
 
 ## 条件运算符"?"(三元运算符)
 
-- 语法：
-
-```javascript
-let result = condition ? value1 : value2;
-```
+- 语法：`let result = condition ? value1 : value2;`
 
 - 逻辑：计算 condition,结果为 true 返回 value1,否则返回 value2
 
@@ -513,7 +501,7 @@ company=="Netscape" ? alert("Right") : alert("Wrong");
 
 - 替代多个 if 判断
 - 至少一个 case,default 可选
-- swich/case 参数可以是任何表达式
+- switch/case 参数可以是任何表达式
 
 ```javascript
 switch(x){
@@ -530,7 +518,7 @@ switch(x){
 ```
 
 - 执行逻辑：从上往下检查 x 与 case 后的值是否**严格相等**，相等则执行 case 下的代码块，遇到 break 则结束整个 switch，没有相等的 case，则执行 default 下的代码块
-- 如果没有 break,程序将**不经过任何检查**继续执行下一个 case
+- 如果没有 break,程序将**不经过任何检查**继续执行下一个 case（只执行一次严格相等检查，并具有穿透性）
 
 ```javascript
 //程序连续执行
@@ -699,4 +687,226 @@ labelName: for (;;) {
 label: {
   break label; //有效
 }
+```
+
+# 函数
+
+- 语法：
+
+```javascript
+//函数的定义
+function name(parameter1,parameter2,...,parameterN){
+  //函数体code
+}
+
+//函数的调用
+name(parameter1,parameter2,...,parameterN);
+```
+
+- 避免代码重复
+- 逻辑有更改，只需要改一处代码
+
+## 局部变量
+
+- 函数体内声明的变量只在函数体内可见
+
+```javascript
+function showMessage() {
+  let message = "Hello,I'm JavaScript"; //局部变量
+  alert(message);
+}
+showMessage(); //Hello,I'm JavaScript
+alert(message); //变量未声明
+```
+
+## 外部变量（全局变量）
+
+- 函数可以访问外部变量
+- 会被同名局部变量遮蔽
+
+```javascript
+let userName = "John";
+function showMessage() {
+  userName = "Bob"; //修改外部变量
+  let message = "hello," + userName; //读取外部变量
+  alert(message);
+}
+alert(userName); //John
+showMessage();
+alert(userName); //Bob,被函数修改了
+
+let userName = "John";
+function showMessage() {
+  let userName = "Bob"; //声明了同名局部变量
+  let message = "Hello," + userName; //Bob
+  alert(message);
+}
+showMessage(); //使用局部变量userName
+alert(userName); //John,外部变量未被更改
+```
+
+## 参数
+
+- 用**复制**方式向函数体中传递局部变量
+- 函数定义时可以指定默认值,默认值可以是任意表达式
+
+```javascript
+function showMessage(from, text) {
+  from = "*" + from + "*";
+  alert(from + ":" + text);
+}
+let from = "Ann";
+showMessage(from, "Hello"); //*Ann*:Hello
+alert(from); //Ann,外部变量未改变，函数修改的是副本
+
+function showMessage(from,text="no text given"){
+  alert(from+":"+text)；
+}
+showMessage("Ann");//Ann:no text given
+
+function showMessage(from,text=anotherFunction()){
+  //anotherFunction仅在text没传递值时调用，返回值将成为text的值
+}
+```
+
+## 返回值
+
+- return：返回表达式的值，并退出函数（不写返回值默认返回 undefined）
+- 没有 return 的函数返回 undefined
+
+```javascript
+function checkAge(age) {
+  if (age > 18) {
+    return true;
+  } else {
+    return confirm("Got a permission from the parents?");
+  }
+}
+
+function showMovie(age) {
+  if (!check(age)) {
+    return; //退出函数
+  }
+  alert("Showing you the movie");
+}
+```
+
+## 函数命名
+
+- 动词前缀，常用 getXXX、calcXXX、createXXX、checkXXX
+- 函数只做和函数名指定的事，自描述
+
+## 函数表达式
+
+- 函数的本质：一种特殊的值
+
+```javascript
+//下面两个函数等效：创建一个函数，并存储在变量sayHi中
+function sayHi() {
+  alert("Hello");
+}
+let sayHi = function () {
+  //可以省略函数名
+  alert("Hello");
+};
+alert(sayHi); //显示函数代码
+let func = sayHi; //复制到其他变量
+func(); //Hello
+```
+
+## 回调函数
+
+- 函数作为参数传递
+- 可创建匿名函数，外部无法访问
+
+```javascript
+function ask(question, yes, no) {
+  if (confirm(question)) yes();
+  else no();
+}
+function showOk() {
+  alert("You agreed.");
+}
+function showCancel() {
+  alert("You canceled the execution.");
+}
+
+ask("Do you agree?", showOk, showCancel);
+//也可以用匿名函数
+ask(
+  "Do you agree?",
+  function () {
+    alert("You agreed.");
+  },
+  function () {
+    alert("You canceled the execution.");
+  }
+);
+```
+
+## 函数表达式 VS 函数声明（创建时机不同）
+
+- 函数表达式：在代码执行到达时被创建，并且仅从那一刻起可用
+- 函数声明：在函数声明被定义之前，它就可以被调用（javascript 引擎会提前创建全局函数）
+- 函数声明具有块级作用域
+
+```javascript
+let age = 16;
+if (age < 18) {
+  welcome(); //Hello!
+  function welcome() {
+    alert("Hello!");
+  }
+  welcome(); //Hello!
+} else {
+  function welcome() {
+    alert("Greetings!");
+  }
+}
+welcome(); //错误：函数未声明
+
+//使用函数表达式
+let age = prompt("What is your age?", 18);
+let welcome;
+if (age < 18) {
+  welcome = function () {
+    alert("Hello!");
+  };
+} else {
+  welcome = function () {
+    alert("Greetings!");
+  };
+}
+welcome(); //正常执行
+```
+
+## 箭头函数
+
+- 单行语法：`let func=(arg1,arg2,...,argN) => expression;`
+
+```javascript
+//等效版本
+let func=function(arg1,arg2,...,argN){
+  return expression;
+}
+```
+
+- 1 个参数可省略括号：`let double = n => n * 2;`
+- 0 个参数需保留括号：`let sayHi = () => alert("Hello");`
+- 动态创建函数:
+
+```javascript
+let age = prompt("What is your age?", 18);
+let welcome = age < 18 ? () => alert("Hello") : () => alert("Greetings!");
+welcome();
+```
+
+- 多行语法：使用花括号，用 return 显示返回
+
+```javascript
+let sum = (a, b) => {
+  let result = a + b;
+  return result;
+};
+alert(sum(1, 2)); //3
 ```
