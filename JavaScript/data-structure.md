@@ -92,7 +92,7 @@ alert(obj["0"]); //test
 alert(obj[0]); //test
 ```
 
-- key 为**proto**时，不能赋值为非对象的值
+- key 为\_\_proto\_\_时，不能赋值为非对象的值
 
 ```javascript
 let obj = {};
@@ -175,6 +175,14 @@ admin.name = "Pete";
 alert(user.name); //Pete
 ```
 
+- const 声明的对象变量可以修改属性,但不能修改自身的值
+
+```javascript
+const user = { name: "John" };
+user.name = "Pete"; //可以修改
+user = { name: "Pete", age: 30 }; //报错
+```
+
 ## 对象的比较
 
 - 仅当两个对象变量引用的是同一个对象时才相等
@@ -190,4 +198,87 @@ let b = {};
 alert(a == b); //false
 ```
 
-->、<、>=、<=的比较，对象会被先转换为原始类型
+- ->、<、>=、<=的比较，对象会被先转换为原始类型
+
+## 对象的克隆与合并（浅拷贝）
+
+- 在原始类型值层面复制属性
+
+```javascript
+let user = {
+  name: "John",
+  age: 30,
+};
+let clone = {};
+for (let key in user) {
+  clone[key] = user[key];
+}
+```
+
+- 使用：`Object.assign(dest,[src1,src2,src3...])`
+  - 将所有源对象的属性拷贝到目标对象
+  - dest：目标对象
+  - src：需要复制的源对象
+  - 返回 dest 对象
+  - 会覆盖已存在的相同 key 的属性
+
+```javascript
+//合并多个对象
+let user = { name: "John" };
+let permissions1 = { canView: true };
+let permissions2 = { canEdit: true };
+//user={name: "John",canView: true,canEdit: true}
+Object.assign(user, permissions1, permissions2);
+
+//已存在相同key的属性会被覆盖
+let user = { name: "John" };
+Object.assign(user, { name: "Pete" });
+alert(user.name); //Pete
+
+//简单克隆
+let user = {
+  name: "John",
+  age: 30,
+};
+let clone = Object.assign({}, user);
+```
+
+## 对象的深层克隆（深拷贝）
+
+- 问题：对象的属性也是对象时，浅拷贝复制的是属性对象的引用，造成原副对象共享一个属性对象
+
+```javascript
+let user = {
+  name: "John",
+  sizes: {
+    height: 182,
+    width: 50,
+  },
+};
+
+let clone = Object.assign({}, user);
+alert(user.sizes === clone.sizes); //true，同一个对象
+
+user.sizes.width++;
+alert(clone.sizes.width); //51
+```
+
+- 解决办法：递归检查对象的属性是否为对象，若是则复制属性对象的结构
+- 现有实现：lodash 库的\_.cloneDeep(obj)
+
+# 垃圾回收
+
+## 可达性
+
+- 根（roots）：
+  - 当前执行函数的局部变量和参数
+  - 当前嵌套调用链上其他函数的局部变量和参数
+  - 全局变量
+  - 内部实现的值
+- 可达性：如果一个值可以从根引用或引用链进行访问，则该值是可达的
+- 垃圾回收器：监控对象的状态，删除不可达的对象
+
+```javascript
+let user = { name: "John" }; //全局变量user引用了对象{name: "John"}
+user = null; //对象{name: "John"}没有引用了，变成不可达的，会被垃圾回收器删除，释放内存
+```
