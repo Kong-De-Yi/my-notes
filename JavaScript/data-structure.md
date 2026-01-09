@@ -276,9 +276,240 @@ alert(clone.sizes.width); //51
   - 全局变量
   - 内部实现的值
 - 可达性：如果一个值可以从根引用或引用链进行访问，则该值是可达的
-- 垃圾回收器：监控对象的状态，删除不可达的对象
+- 垃圾回收器：监控对象的状态，删除不可达对象
 
 ```javascript
 let user = { name: "John" }; //全局变量user引用了对象{name: "John"}
 user = null; //对象{name: "John"}没有引用了，变成不可达的，会被垃圾回收器删除，释放内存
+
+let user = { name: "Jonh" };
+let admin = user;
+user = null; //通过admin全局变量仍然可以访问{name: "John"},是可达的
+```
+
+```javascript
+function marry(man, women) {
+  women.husband = man;
+  man.wife = women;
+  return {
+    father: man,
+    mother: women,
+  };
+}
+//{name: "John"}对象虽然持有对{name: "Ann"}的引用，但没有被任何变量引用，变成不可达
+let family = marry({ name: "John" }, { name: "Ann" });
+delete family.father;
+delete family.mother.husband;
+```
+
+```javascript
+function marry(man, women) {
+  women.husband = man;
+  man.wife = women;
+  return {
+    father: man,
+    mother: women,
+  };
+}
+//{name: "John"}与{name: "Ann"}互相引用，但外部没有对其任意对象的引用，整体变成不可达
+let family = marry({ name: "John" }, { name: "Ann" });
+family = null;
+```
+
+- 内部算法：从根出发，遍历并标记所有引用，删除没有被标记的对象（mark-and-sweep）
+
+## 对象方法
+
+- 本质：作为对象属性的函数
+
+```javascript
+let user = {
+  name: "John",
+  age: 30,
+};
+user.sayHi = function () {
+  alert("Hello");
+};
+user.sayHi(); //Hello
+```
+
+- 方法简写
+
+```javascript
+let user = {
+  name: "John",
+  age: 30,
+  sayHi: function () {
+    alert("Hello");
+  },
+};
+//方法简写
+let user = {
+  name: "John",
+  age: 30,
+  sayHi() {
+    alert("Hello"); //与 sayHi:function(){...} 一样
+  },
+};
+```
+
+- 对象方法访问对象属性："this"指代调用该方法的对象（点符号前面的对象）
+
+```javascript
+let user = {
+  name: "John",
+  age: 30,
+  sayHi() {
+    alert(this.name); //this指当前的对象，即user
+  },
+};
+user.sayHi(); //John
+```
+
+- 使用外部变量名引用属性是不可靠的
+
+```javascript
+let user = {
+  name: "John",
+  age: 30,
+  sayHi() {
+    alert(user.name); //使用外部变量名引用属性
+  },
+};
+let admin = user;
+user = null;
+admin.sayHi(); //类型错误
+```
+
+- "this"不专属于对象方法，是在被调用时计算出来的
+
+```javascript
+let user = { name: "John" };
+let admin = { name: "Admin" };
+
+function sayHi() {
+  alert(this.name);
+}
+
+user.f = sayHi;
+admin.f = sayHi;
+
+user.f(); //John (this == user)
+admin.f(); //Admin (this == admin)
+admin["f"](); //Admin (this == admin)
+```
+
+- 没有对象的情况下调用：this==undefined（"use strict"模式下）
+
+```javascript
+function sayHi() {
+  alert(this.name);
+}
+sayHi(); //undefined
+```
+
+- 箭头函数没有自己的"this"
+
+```javascript
+let user = {
+  firstName: "Ilya",
+  sayHi() {
+    let arrow = () => alert(this.firstName); //this来自user.sayHi()中的user
+    arrow();
+  },
+};
+user.sayHi(); //Ilya
+```
+
+## 构造函数和"new"
+
+- 本质是用 "new" 调用的常规函数，约定命名以大写字母开头，可以复用创建对象的代码
+
+```javascript
+function User(name) {
+  this.name = name;
+  this.isAdmin = false;
+}
+
+let user = new User("Jack");
+alert(user.name); //Jack
+alert(user.isAdmin); //false
+```
+
+- "new" 的执行步骤（用 new 调用产生的效果）
+  - 创建空对象并赋值给 this
+  - 执行函数体（修改 this，添加属性...)
+  - 返回 this
+
+```javascript
+function User(name) {
+  //this={};(隐式创建)
+  //添加属性到this
+  this.name = name;
+  this.isAdmin = false;
+  //return this;(隐式返回)
+}
+```
+
+- 立即调用的一次性构造函数
+
+```javascript
+let user = new (function () {
+  this.name = "John";
+  this.isAdmin = false;
+  //其他复杂的逻辑
+})();
+```
+
+- 测试构造器模式：new.target（常规调用返回 undefined,new 调用返回函数本身）
+
+```javascript
+function User(name) {
+  if (!new.target) {
+    return new User(name); //没用使用new调用，重新用new调用
+  }
+  this.name = name;
+}
+```
+
+- 构造函数中的 return
+  - return 一个对象，则用该对象替换 this 返回
+  - return 一个原始类型或者空则忽略
+
+```javascript
+function BigUser() {
+  this.name = "John";
+  return { name: "Godzilla" }; //返回该对象
+}
+alert(new BigUser().name); //Godzilla
+
+function SmallUser() {
+  this.name = "John";
+  return; //或者return 1,依然返回 this
+}
+
+alert(new SmallUser().name); //John
+```
+
+- 无参数的构造函数用 new 调用时可省略括号`let user = new User;//等同于let user = new User();`
+
+## 不存在的属性和可选链"?."
+
+- 访问嵌套对象属性的安全方式，避免中间对象不存在时出现错误
+
+```javascript
+let user = {};
+alert(user.address.street); //出现错误，嵌套对象address不存在，尝试读取undefined.street
+
+//如果 document.querySelector('.elem') 的结果为 null，则会出现错误
+let html = document.querySelector(".elem").innerHTML;
+```
+
+- 原理：value?.prop,若 value 为 undefined 或者 null，返回 undefined,否则返回 value.prop
+
+```javascript
+let user = {};
+alert(user?.address?.street);
+
+let html = document.querySelector(".elem")?.innerHTML;
 ```
