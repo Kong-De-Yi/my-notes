@@ -1,0 +1,89 @@
+# 数据类型
+
+## 原始类型的方法
+
+- 需求：对原始类型执行操作，最好使用方法来访问
+- 解决：对象包装器（String、Number、Boolean、Symbol、Bigint）
+- 原理：访问原始值的属性时，创建对象包装器对象，访问结束就销毁
+
+```javascript
+let str = "hello";
+alert(str.toUpperCase()); //HELLO
+
+let n = 1.23456;
+alert(n.toFixed(2)); //1.23
+```
+
+- 构造器 String/Number/Boolean 仅供内部使用
+
+```javascript
+alert(typeof 0); //"number"
+alert(typeof new Number(0)); //"object"
+
+let zero = new Number(0);
+if (zero) {
+  //zero是对象，始终为true
+  alert("zero is truthy?!?");
+}
+```
+
+- 调用不带"new"的 String/Number/Boolean 有效
+
+```javascript
+let num = Number("123"); //将字符串转换为数字
+```
+
+- null 和 undefined 没有对象包装器，也没有任何方法
+
+## 数字类型
+
+- Number：双精度浮点数（64 位 IEEE-754 格式），范围 ±($2^{53}$-1)
+- Bigint：任意长度的整数
+- 数字的更多写法
+
+```javascript
+let billion = 1000000000;
+let billion = 1_000_000_000; //更具可读性的写法，_会被javascript引擎忽略
+
+//e后面的正数表示乘以1后面跟着指定数量的0的数字
+1e3 === 1 * 1000; //e3表示*1000
+1.23e6 === 1.23 * 1000000; //e6表示*1000000
+
+//e后面的负数表示除以1后面跟着指定数量的0的数字
+1e-3 === 1 / 1000; //e-3表示/1000
+1.23e-6 === 1.23 / 1000000; //e-6表示/1000000
+1234e-2 === 1234 / 100; //e-2表示/100
+```
+
+- 不同的进制
+  - 十六进制：`0xff`、`0xFF`(255)
+  - 二进制：`0b11111111`(255)
+  - 八进制：`0o377`(255)
+- toString(base)：返回 base 进制中的字符串表示形式,base 取值范围 2-36，默认 10
+
+```javascript
+let num = 255;
+alert(num.toString(16)); //ff
+alert(num.toString(2)); //11111111
+```
+
+- 使用两个点来调用方法(或者括号)：
+  `let num = 123456789..toString(36); //'21i3v9'`
+  `let num = (123456789).toString(36); //'21i3v9'`
+- 舍入到整数
+  - Math.floor：向下舍入，3.1 —> 3,-1.1 —> -2
+  - Math.ceil：向上输入，3.1 —> 4,-1.1 —> -1
+  - Math.round：向最接近的整数舍入，3.1 —> 3,3.6 —> 4，3.5 —> 4
+  - Math.trunc：截断取整，3.1 —> 3,-1.1 —> -1
+- 舍入到小数点后 n 位
+  - 乘除法
+  - toFixed(n)：将数字舍入到小数点后 n 位，并返回字符串形式，向最接近的值输入，类似 Math.round
+
+```javascript
+let num = 1.23456;
+alert(Math.round(num * 100) / 100); //1.23456—>123.456—>123—>1.23
+
+let num = 12.36;
+alert(num.toFixed(1)); //"12.4"
+alert(num.toFixed(5)); //"12.36000"，在末尾添加0
+```
