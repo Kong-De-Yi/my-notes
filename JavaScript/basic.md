@@ -232,12 +232,12 @@ let str = "123";
 let num = Number(str); //123
 ```
 
-- 非有效数字->NaN
-- undefined->NaN
-- null->0
-- true / false->1 / 0
-- ""->0
-- string=>number 或者 NaN
+- 非有效数字 -> NaN
+- undefined -> NaN
+- null -> 0
+- true / false -> 1 / 0
+- "" -> 0
+- string -> number 或者 NaN
 
 ### 布尔型转换：Boolean()
 
@@ -344,20 +344,44 @@ for(a=1,b=3,c=a*b;a<10;a++){...}
 
 ## 比较运算符：结果为 boolean
 
-- 大于/小于：a > b,a < b
-- 大于等于/小于等于：a >= b,a <= b
-- 相等：a == b（自动转 number,不能区分 0,"",false)
-- 不相等：a != b
-- 严格相等：a === b（不做类型转换)
-- 严格不相等：a !== b（不做类型转换)
-- 字符串比较：按 unicode 编码顺序比较
-- 不同类型间比较：先转 number 再比较
-- 在<、>、<=、>=中 null->0，undefined->NaN
-- null 与 undefined 在==中不做类型转换，除了互等，不等于任何值
+1. ==（宽松相等）
+
+- 不同类型比较：尽可能转换为数字比较
+- 特殊情况：
+
+  - undefined == null -> true
+  - undefined 和 null 与任何值比较，不转换为数字，始终返回 false
+  - 对象与非对象比较：对象调用 valueOf() / toString()转为原始值再比较
+  - NaN 与任何值（包括自己）比较 -> false
+  - Boolean 与其他类型比较：转数字后再比较（true -> 1,false ->0）
+  - String 与 Number 比较：转数字后再比较
+  - Symbol 与其他类型比较：不自动转换，始终返回 false(Symbol() == Symbol()也是 false)
+
+2. ===（严格相等）
+
+- 类型不同 —> 直接 false
+- 类型相同：
+  - Number：数值相同（NaN != NaN）
+  - String：内容相同
+  - Boolean：同为 true 或 false
+  - Object：引用同一对象
+  - Symbol：引用同一 Symbol
+  - null === null,undefined === undefined
+
+3. <,>,<=,>=（不等比较）
+
+- 两边都是字符串 -> 按 unicode 码点逐位比较
+- 其他情况 -> 转换为数字比较
+- 特殊情况：
+  - Symbol 不能进行不等比较（TypeError）
+  - 对象比较：转为原始值（优先 valueOf()，再 toString())
 
 ```javascript
 null === undefined; //false
 null == undefined; //true
+NaN === NaN; //false,NaN与任何值都不等，包括自己
+NaN == NaN; //false
++0 === -0; //true
 ```
 
 ## 逻辑运算符

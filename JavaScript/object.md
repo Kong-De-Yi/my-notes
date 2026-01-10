@@ -2,7 +2,7 @@
 
 - 定义：拥有一系列属性的数据集合
 - 属性：键值对（key:value)
-  - key：string
+  - key：string 或 symbol
   - value：任意类型
 - 对象的创建
 
@@ -44,22 +44,19 @@ user["likes birds"] = true;
 alert(user["likes birds"]); //true
 delete user["like birds"]; //删除
 
-//动态获取属性的值
-let key = prompt("What do you want to know about the user?", "name");
-alert(user[key]);
-```
-
-- 属性的添加：`user.isAdmin=true;`
-- 属性的删除：`delete user.age;`
-- key 为多词需加引号：
-
-```javascript
 let user = {
   name: "John",
   age: 30,
   "likes birds": true, //多词属性名必须加引号
 };
+
+//动态获取属性的值
+let key = prompt("What do you want to know about the user?", "name");
+alert(user[key]);
 ```
+
+- 属性的添加：`user.isAdmin=true;`（直接赋值）
+- 属性的删除：`delete user.age;`
 
 - 最后一个属性以逗号结尾，方便添加，删除和移动属性
 - 属性简写：key 与 value 相同时可用
@@ -74,7 +71,7 @@ function makeUser(name, age) {
 }
 ```
 
-- key 无保留字限制，可以是任何字符串和 symbol,**访问时会自动转为 string**
+- key 无保留字限制，可以是任何字符串和 symbol,**除 symbol 外其他原始类型访问时会自动转为 string**
 
 ```javascript
 //保留字正常使用
@@ -161,6 +158,20 @@ for (let prop in user) {
 }
 ```
 
+- symbol 键会被跳过
+
+```javascript
+let id = Symbol("id");
+let user = {
+  name: "John",
+  age: 30,
+  [id]: 123,
+};
+for (let key in user) {
+  alert(key); //name,age(没有symbol)
+}
+```
+
 ## 对象的引用和复制
 
 - 原始类型作为整体存储和复制
@@ -183,7 +194,7 @@ user.name = "Pete"; //可以修改
 user = { name: "Pete", age: 30 }; //报错
 ```
 
-## 对象的比较
+## 对象间的比较
 
 - 仅当两个对象变量引用的是同一个对象时才相等
 
@@ -198,7 +209,7 @@ let b = {};
 alert(a == b); //false
 ```
 
-- ->、<、>=、<=的比较，对象会被先转换为原始类型
+- \>、<、>=、<=的比较，对象会被先转换为原始类型
 
 ## 对象的克隆与合并（浅拷贝）
 
@@ -326,24 +337,17 @@ family = null;
 let user = {
   name: "John",
   age: 30,
+  sayHi: function () {
+    alert("Hello");
+  },
 };
-user.sayHi = function () {
-  alert("Hello");
-};
+
 user.sayHi(); //Hello
 ```
 
 - 方法简写
 
 ```javascript
-let user = {
-  name: "John",
-  age: 30,
-  sayHi: function () {
-    alert("Hello");
-  },
-};
-//方法简写
 let user = {
   name: "John",
   age: 30,
@@ -505,11 +509,175 @@ alert(user.address.street); //出现错误，嵌套对象address不存在，尝�
 let html = document.querySelector(".elem").innerHTML;
 ```
 
-- 原理：value?.prop,若 value 为 undefined 或者 null，返回 undefined,否则返回 value.prop
+- 原理：对于表达式 value?.prop
+  - 若 value 为 undefined 或者 null，返回 undefined
+  - 否则返回 value.prop
+  - 使?.前面的值成为可选值，对其后面的值不起作用
 
 ```javascript
 let user = {};
 alert(user?.address?.street);
 
 let html = document.querySelector(".elem")?.innerHTML;
+```
+
+- 不要滥用,应使用在?.前面的值可以不存在的情况，必要时用代码逻辑去判断，如 user 对象必须存在，应该用`user.address?.street`，而不是`user?.address?.street`
+- ?.前面的值必须先声明，可以 delete 属性，但不能给属性赋值
+
+```javascript
+delete user?.name;//如果user存在，则删除user.name
+
+let user={};
+user?.name="John"//Uncaught SyntaxError: Invalid left-hand side in assignment
+```
+
+- 短路效应：?.前面的值不存在会立即停止运算返回
+
+```javascript
+let user = null;
+let x = 0;
+user?.sayHi(x++); //user不存在，代码不会执行sayHi()和x++
+alert(x); //0
+```
+
+- 变体：?.()—调用一个可能不存在的函数
+
+```javascript
+let userAdmin = {
+  admin() {
+    alert("I am admin");
+  },
+};
+let userGuest = {};
+userAdmin.admin?.(); //I am admin
+userGuest.admin?.(); //啥都没发生
+```
+
+- 变体：?.[]—访问属性所属对象可能不存在
+
+```javascript
+let key = "firstName";
+let user1 = {
+  fristName: "John",
+};
+let user2 = null;
+
+alert(user1?.[key]); //John
+alert(user2?.[key]); //undefined
+```
+
+## symbol 类型
+
+- 表示唯一的标识符
+- 创建方法：
+
+```javascript
+let id = Symbol();
+//带symbol名的symbol
+let id = Symbol("id"); //id是描述为"id"的symbol
+```
+
+- symbol 具有唯一性，即使 symbol 名相同
+
+```javascript
+let id1 = Symbol("id");
+let id2 = Symbol("id");
+alert(id1 == id2); //false
+```
+
+- symbol 不会被自动转换为字符串，可调用 toString() 方法进行转换（也可访问 description 属性）
+
+```javascript
+let id = Symbol("id");
+alert(id); //类型错误：无法将symbol值转换为字符串
+alert(id.toString()); //Symbol(id)
+alert(id.description); //id
+```
+
+- symbol 的作用：防止属性被重写（string 键会重名）
+
+```javascript
+let user = {
+  name: "John",
+};
+//我的代码
+let id = Symbol("id");
+user[id] = 1; //使用symbol键
+
+//别人的代码
+let id = Symbol("id");
+user[id] = "Their id value"; //不会覆盖我的代码中的user[id]，因为symbol总是不同的
+```
+
+- 对象字面量中需要对 symbol 键使用方括号
+
+```javascript
+let id = Symbol("id");
+let user = {
+  name: "John",
+  [id]: 123,
+};
+```
+
+- for...in 遍历，Object.keys(obj)：会忽略 symbol 属性（隐藏符号属性原则）
+- Object.assign(dest,src1,...,srcN)：会同时复制 string 和 symbol 属性
+- 全局 symbol（注册表）：
+  - 作用：确保相同 symbol 名返回同一个 symbol
+  - `Symbol.for(key)`：从注册表中读取 symbol 名为 key 的 symbol，没有则创建并存入注册表
+  - `Symbol.keyFor(symbol)`：从注册表中查询并返回 symbol 的 symbol 名,非全局 symbol 返回 undefined
+
+```javascript
+let id = Symbol.for("id"); //读取symbol名为"id"的symbol，没有则创建
+let idAgain = Symbol.for("id"); //重新获取symbol名为"id"的symbol
+alert(id === idAgain); //true
+
+let sym = Symbol.for("name");
+let sym2 = Symbol.for("id");
+alert(Symbol.keyFor(sym)); //name
+alert(Symbol.keyFor(sym2)); //id
+
+let globalSymbol = Symbol.for("name");
+let localSymbol = Symbol("name");
+alert(Symbol.forKey(globalSymbol)); //name，全局symbol
+alert(Symbol.forKey(localSymbol)); //undefined,非全局symbol
+
+alert(localSymbol.description); //name，所有symbol都有description属性
+```
+
+- 系统 symbol：可以改变系统内建行为
+  - Symbol.hasInstance
+  - Symbol.isConcatSpreadable
+  - Symbol.iterator
+  - Symbol.toPrimitive
+
+## 对象——原始值转换
+
+- javascript 不支持运算符重载，会将对象自动转换为原始值，再用原始值进行运算
+- 转换规则：
+  - —> Boolean：始终为 true
+  - —> Number 和 String：通过 hint ["string","number","default"]
+- hint 转换过程：
+  1. 调用 obj\[Symbol.toPrimitive](hint)得到返回的原始值（如果存在该方法，否则往下）
+  2. hint: "string" —> 调用 obj.toString() 或 obj.valueOf()
+  3. hint: "number"或"default" —> 调用 obj.valueOf() 或 obj.toString()
+
+```javascript
+obj[Symbol.toPrimitive] = function (hint) {
+  //这里是将此对象转换为原始值的代码
+  //必须返回一个原始值
+  //hint="string"、"number"或"default"中的一个
+};
+
+let user = {
+  name: "John",
+  money: 1000,
+  [Symbol.toPrimitive](hint) {
+    alert(`hint:${hint}`);
+    return hint == "string" ? `{name:"${this.name}"}` : this.money;
+  },
+};
+
+alert(user); //hint:string -> {name:"John"}
+alert(+user); //hint:number -> 1000
+alert(user + 500); //hint:default -> 1500
 ```
