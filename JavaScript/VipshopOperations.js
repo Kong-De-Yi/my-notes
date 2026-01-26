@@ -7,10 +7,41 @@ class Main {
       MsgBox(e.message);
       return;
     }
+
+    RegularProduct.data.forEach((item) => {
+      let findItem = VipshopGoods.data.find(
+        (key) => key.itemNumber === item.itemNumber,
+      );
+      if (!findItem) {
+        VipshopGoods.data.push(new VipshopGoods(item.itemNumber));
+      }
+    });
+
+    let absentItemNumbers = [];
     VipshopGoods.data.forEach((item) => {
       let findItem = RegularProduct.data.find(
-        (key) => key.itemNumber == item.itemNumber,
+        (key) => key.itemNumber === item.itemNumber,
       );
+      if (!findItem) {
+        absentItemNumbers.push(item);
+      }
+    });
+
+    if (absentItemNumbers.length != 0) {
+      MsgBox(
+        RegularProduct.wsName +
+          "中没有找到货号【" +
+          absentItemNumbers +
+          "】的数据，请检查后重试！",
+      );
+      return;
+    }
+
+    VipshopGoods.data.forEach((item) => {
+      let findItem = RegularProduct.data.find(
+        (key) => key.itemNumber === item.itemNumber,
+      );
+
       item.thirdLevelCategory = findItem.thirdLevelCategory;
       item.P_SPU = findItem.P_SPU;
       item.MID = findItem.MID;
@@ -19,7 +50,152 @@ class Main {
       item.itemStatus = findItem.itemStatus;
       item.vipshopPrice = findItem.vipshopPrice;
       item.finalPrice = findItem.finalPrice;
+      item.sellableDays = findItem.sellableDays;
+      item.brandSN = findItem.brandSN;
+
+      let products = RegularProduct.data.filter(
+        (key) => item.itemNumber === key.itemNumber,
+      );
+      products.sort(RegularProduct.compare);
+      //可售库存
+      item.sellableInventory = products.reduce(
+        (sum, current) => sum + Number(current.sellableInventory),
+        0,
+      );
+
+      //是否断码
+      item.isOutOfStock = products
+        .reduce((sizes, current) => {
+          if (
+            current.sizeStatus == "尺码上线" &&
+            current.sellableInventory == 0
+          ) {
+            sizes.push(current.size);
+          }
+          return sizes;
+        }, [])
+        .join("/");
     });
+
+    DAO.updateWorksheet(
+      VipshopGoods.wsName,
+      VipshopGoods.data,
+      Object.assign(
+        {},
+        VipshopGoods.keyToTitle,
+        VipshopGoods.optionalKeyToTitle,
+      ),
+    );
+  }
+
+  static updateProductPrice() {
+    try {
+      this.updateRegularProduct();
+      ProductPrice.initializeData();
+    } catch (e) {
+      MsgBox(e.message);
+      return;
+    }
+
+    let absentItemNumbers = [];
+    VipshopGoods.data.forEach((item) => {
+      let findItem = ProductPrice.data.find(
+        (key) => key.itemNumber === item.itemNumber,
+      );
+      if (!findItem) {
+        absentItemNumbers.push(item);
+      }
+    });
+
+    if (absentItemNumbers.length != 0) {
+      MsgBox(
+        ProductPrice.wsName +
+          "中没有找到货号【" +
+          absentItemNumbers +
+          "】的数据，请检查后重试！",
+      );
+      return;
+    }
+
+    VipshopGoods.data.forEach((item) => {
+      let findItem = ProductPrice.data.find(
+        (key) => key.itemNumber === item.itemNumber,
+      );
+
+      item.picture = findItem.picture;
+      item.costPrice = findItem.costPrice;
+      item.lowestPrice = findItem.lowestPrice;
+      item.silverPrice = findItem.silverPrice;
+      item.userOperations1 = findItem.userOperations1;
+      item.userOperations2 = findItem.userOperations2;
+    });
+
+    DAO.updateWorksheet(
+      VipshopGoods.wsName,
+      VipshopGoods.data,
+      Object.assign(
+        {},
+        VipshopGoods.keyToTitle,
+        VipshopGoods.optionalKeyToTitle,
+      ),
+    );
+  }
+
+  static updateInventory() {
+    try {
+      this.updateRegularProduct();
+      ComboProduct.initializeData();
+      Inventory.initializeData();
+    } catch (e) {
+      MsgBox(e.message);
+      return;
+    }
+
+    VipshopGoods.data.forEach((item) => {
+      item.finishedGoodsMainInventory = 0;
+      item.finishedGoodsIncomingInventory = 0;
+      item.finishedGoodsFinishingInventory = 0;
+      item.finishedGoodsOversoldInventory = 0;
+      item.finishedGoodsPrepareInventory = 0;
+      item.finishedGoodsReturnInventory = 0;
+      item.finishedGoodsPurchaseInventory = 0;
+
+      let products = RegularProduct.data.filter(
+        (key) => item.itemNumber == key.itemNumber,
+      );
+
+      products.forEach((productItem) => {
+        let findProuctInventory = Inventory.data.find(
+          (key) => key.productCode == productItem.productCode,
+        );
+        if (findProuctInventory) {
+          item.finishedGoodsMainInventory += +findProuctInventory.mainInventory;
+          item.finishedGoodsIncomingInventory +=
+            +findProuctInventory.incomingInventory;
+          item.finishedGoodsFinishingInventory +=
+            +findProuctInventory.finishingInventory;
+          this.finishedGoodsOversoldInventory +=
+            +findProuctInventory.oversoldInventory;
+          this.finishedGoodsPrepareInventory +=
+            +findProuctInventory.prepareInventory;
+          this.finishedGoodsReturnInventory +=
+            +findProuctInventory.returnInventory;
+          this.finishedGoodsPurchaseInventory +=
+            +findProuctInventory.purchaseInventory;
+        }
+      });
+      item.finishedGoodsTotalInventory =
+        item.finishedGoodsMainInventory +
+        item.finishedGoodsIncomingInventory +
+        item.finishedGoodsFinishingInventory +
+        item.finishedGoodsOversoldInventory +
+        item.finishedGoodsPrepareInventory +
+        item.finishedGoodsReturnInventory +
+        item.finishedGoodsPurchaseInventory;
+
+      //通货库存计算
+    });
+
     DAO.updateWorksheet(
       VipshopGoods.wsName,
       VipshopGoods.data,
@@ -103,59 +279,8 @@ class VipshopGoods {
     generalGoodsPurchaseInventory: "通货在途",
     totalSales: "销量总计",
   };
+
   static optionalKeyToTitle = {};
-
-  static priceConfig = [
-    {
-      brandSN: "10016178",
-      brand: "LAVI",
-      packagingFee: 1.5, //发货打包费
-      shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
-      returnProcessingFee: 1.8, //退货整理费
-      vipDiscountRate: 0.05, //超V优惠比例
-      vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
-      platformCommission: 0.3, //平台扣点
-      brandCommission: 0.07, //品牌回款扣点
-    },
-    {
-      brandSN: "10015023",
-      brand: "巴帝巴帝",
-      packagingFee: 1.5, //发货打包费
-      shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
-      returnProcessingFee: 1.8, //退货整理费
-      vipDiscountRate: 0.05, //超V优惠比例
-      vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
-      platformCommission: 0.25, //平台扣点
-      brandCommission: 0.12, //品牌回款扣点
-    },
-    {
-      brandSN: "10000708",
-      brand: "史努比",
-      packagingFee: 1.5, //发货打包费
-      shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
-      returnProcessingFee: 1.8, //退货整理费
-      vipDiscountRate: 0.02, //超V优惠比例
-      vipDiscountBearingRatio: 0, //超V优惠商家承担比例
-      platformCommission: 0.3, //平台扣点
-      brandCommission: 0.11, //品牌回款扣点
-    },
-    {
-      brandSN: "10000782",
-      brand: "小猪班纳",
-      packagingFee: 1.5, //发货打包费
-      shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
-      returnProcessingFee: 1.8, //退货整理费
-      vipDiscountRate: 0.05, //超V优惠比例
-      vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
-      platformCommission: 0.27, //平台扣点
-      brandCommission: 0.1, //品牌回款扣点
-    },
-  ];
-
   static data = [];
   static initializeData() {
     this.optionalKeyToTitle = Utility.generateDateKeyToTitle();
@@ -178,6 +303,10 @@ class VipshopGoods {
   }
 
   static checkData() {}
+
+  constructor(itemNumber) {
+    this.itemNumber = itemNumber;
+  }
 
   get salesAge() {
     return this.firstListingTime
@@ -221,81 +350,58 @@ class VipshopGoods {
   }
 
   get firstOrderPrice() {
-    if (this.finalPrice) return +this.finalPrice - (this.userOperations1 ?? 0);
+    if (this.finalPrice) return +this.finalPrice - +(this.userOperations1 ?? 0);
   }
   set firstOrderPrice(value) {
     this._firstOrderPrice = value;
   }
 
-  get superVipPrice() {}
+  get superVipPrice() {
+    let priceInfo = PriceCalculator.priceConfig.find(
+      (item) => item.brandSN === this.brandSN,
+    );
+    if (priceInfo) {
+      let vipDiscountAmount =
+        this.finalPrice > 50
+          ? Math.round(this.finalPrice * priceInfo.vipDiscountRate)
+          : Number((this.finalPrice * priceInfo.vipDiscountRate).toFixed(1)); //超V优惠金额
+
+      return (
+        this.finalPrice -
+        vipDiscountAmount -
+        +(this.userOperations1 ?? 0) -
+        +(this.userOperations2 ?? 0)
+      );
+    }
+  }
   set superVipPrice(value) {
     this._superVipPrice = value;
   }
 
-  get profit() {}
+  get profit() {
+    return PriceCalculator.calProfit(
+      this.brandSN,
+      +this.costPrice,
+      +this.finalPrice,
+      +(this.userOperations1 ?? 0),
+      +(this.userOperations2 ?? 0),
+    );
+  }
   set profit(value) {
     this._profit = value;
   }
 
-  get profitRate() {}
+  get profitRate() {
+    return PriceCalculator.calProfitRate(
+      this.brandSN,
+      +this.costPrice,
+      +this.finalPrice,
+      +(this.userOperations1 ?? 0),
+      +(this.userOperations2 ?? 0),
+    );
+  }
   set profitRate(value) {
     this._profitRate = value;
-  }
-
-  get unitPriceOfLast7Days() {
-    return this.salesAmountOfLast7Days / this.salesQuantityOfLast7Days;
-  }
-  set unitPriceOfLast7Days(value) {
-    this._unitPriceOfLast7Days = value;
-  }
-
-  get clickThroughRateOfLast7Days() {
-    return this.productDetailsUVOfLast7Days / this.exposureUVOfLast7Days;
-  }
-  set clickThroughRateOfLast7Days(value) {
-    this._clickThroughRateOfLast7Days = value;
-  }
-
-  get purchaseRateOfLast7Days() {
-    return this.customerCountOfLast7Days / this.productDetailsUVOfLast7Days;
-  }
-  set purchaseRateOfLast7Days(value) {
-    this._purchaseRateOfLast7Days = value;
-  }
-
-  get addToCartRateOfLast7Days() {
-    return this.addToCartUVOfLast7Days / this.productDetailsUVOfLast7Days;
-  }
-  set addToCartRateOfLast7Days(value) {
-    this._addToCartRateOfLast7Days = value;
-  }
-
-  get rejectAndReturnRateOfLast7Days() {
-    return this.rejectAndReturnCountOfLast7Days / this.salesQuantityOfLast7Days;
-  }
-  set rejectAndReturnRateOfLast7Days(value) {
-    this._rejectAndReturnRateOfLast7Days = value;
-  }
-
-  get isOutOfStock() {
-    return this._sizesOutOfStock;
-  }
-  set isOutOfStock(value) {
-    this._sizesOutOfStock = value;
-  }
-
-  get totalInventory() {}
-  set totalInventory(value) {
-    this._totalInventory = value;
-  }
-  get finishedGoodsTotalInventory() {}
-  set finishedGoodsTotalInventory(value) {
-    this._finishedGoodsTotalInventory = value;
-  }
-
-  get generalGoodsTotalInventory() {}
-  set generalGoodsTotalInventory(value) {
-    this._generalGoodsTotalInventory = value;
   }
 
   get totalSales() {}
@@ -355,6 +461,17 @@ class RegularProduct {
   static initializeData() {
     this.data = DAO.readWorksheet(this.wsName, this, this.keyToTitle);
   }
+
+  static compare(productA, productB) {
+    const sizeA = Number(productA.size);
+    const sizeB = Number(productB.size);
+
+    if (Number.isNaN(sizeA) || Number.isNaN(sizeB)) {
+      return 0;
+    }
+
+    return sizeA - sizeB;
+  }
 }
 
 //组合商品
@@ -411,6 +528,120 @@ class ProductSales {
   static data = [];
   static initializeData() {
     this.data = DAO.readWorksheet(this.wsName, this, this.keyToTitle);
+  }
+}
+
+class PriceCalculator {
+  static priceConfig = [
+    {
+      brandSN: "10016178",
+      brand: "LAVI",
+      packagingFee: 1.5, //发货打包费
+      shippingCost: 1.5, //发货运费
+      returnRate: 0.3, //退货率
+      returnProcessingFee: 1.8, //退货整理费
+      vipDiscountRate: 0.05, //超V优惠比例
+      vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
+      platformCommission: 0.3, //平台扣点
+      brandCommission: 0.07, //品牌回款扣点
+    },
+    {
+      brandSN: "10015023",
+      brand: "巴帝巴帝",
+      packagingFee: 1.5, //发货打包费
+      shippingCost: 1.5, //发货运费
+      returnRate: 0.3, //退货率
+      returnProcessingFee: 1.8, //退货整理费
+      vipDiscountRate: 0.05, //超V优惠比例
+      vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
+      platformCommission: 0.25, //平台扣点
+      brandCommission: 0.12, //品牌回款扣点
+    },
+    {
+      brandSN: "10000708",
+      brand: "史努比",
+      packagingFee: 1.5, //发货打包费
+      shippingCost: 1.5, //发货运费
+      returnRate: 0.3, //退货率
+      returnProcessingFee: 1.8, //退货整理费
+      vipDiscountRate: 0.02, //超V优惠比例
+      vipDiscountBearingRatio: 0, //超V优惠商家承担比例
+      platformCommission: 0.3, //平台扣点
+      brandCommission: 0.11, //品牌回款扣点
+    },
+    {
+      brandSN: "10000782",
+      brand: "小猪班纳",
+      packagingFee: 1.5, //发货打包费
+      shippingCost: 1.5, //发货运费
+      returnRate: 0.3, //退货率
+      returnProcessingFee: 1.8, //退货整理费
+      vipDiscountRate: 0.05, //超V优惠比例
+      vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
+      platformCommission: 0.27, //平台扣点
+      brandCommission: 0.1, //品牌回款扣点
+    },
+  ];
+
+  static calProfit(
+    brandSN,
+    costPrice,
+    salesPrice,
+    userOperations1 = 0,
+    userOperations2 = 0,
+  ) {
+    let priceInfo = this.priceConfig.find((item) => item.brandSN === brandSN);
+    if (!priceInfo) {
+      throw new Error("没有找到品牌SN【" + brandSN + "】的价格信息，请核实！");
+    }
+
+    const packagingFee = 1.5; //发货打包费
+    const shippingCost = 1.5; //发货运费
+    const returnRate = 0.3; //退货率
+    const returnProcessingFee = 1.8; //退货整理费
+    const vipDiscountRate = priceInfo.vipDiscountRate; //超V优惠比例
+    const vipDiscountBearingRatio = priceInfo.vipDiscountBearingRatio; //超V优惠商家承担比例
+    const platformCommission = priceInfo.platformCommission; //平台扣点
+    const brandCommission = priceInfo.brandCommission; //品牌回款扣点
+
+    let vipDiscountAmount =
+      salesPrice > 50
+        ? Math.round(salesPrice * vipDiscountRate)
+        : Number((salesPrice * vipDiscountRate).toFixed(1)); //超V优惠金额
+
+    let priceAfterCoupon = salesPrice - userOperations1 - userOperations2;
+
+    let profit =
+      priceAfterCoupon -
+      costPrice -
+      packagingFee -
+      shippingCost -
+      (1 / (1 - returnRate) - 1) * (packagingFee + shippingCost) -
+      returnRate * returnProcessingFee -
+      vipDiscountAmount * vipDiscountBearingRatio -
+      priceAfterCoupon * platformCommission -
+      (priceAfterCoupon * (1 - platformCommission) -
+        vipDiscountAmount * vipDiscountBearingRatio) *
+        brandCommission;
+
+    return Number(profit.toFixed(2));
+  }
+
+  static calProfitRate(
+    brandSN,
+    costPrice,
+    salesPrice,
+    userOperations1 = 0,
+    userOperations2 = 0,
+  ) {
+    let profit = this.calProfit(
+      brandSN,
+      costPrice,
+      salesPrice,
+      userOperations1,
+      userOperations2,
+    );
+    return Number((profit / costPrice).toFixed(5));
   }
 }
 
