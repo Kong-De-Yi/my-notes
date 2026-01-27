@@ -5,7 +5,7 @@ class Main {
       RegularProduct.initializeData();
     } catch (e) {
       MsgBox(e.message);
-      return;
+      return false;
     }
 
     let absentItemNumbers = [];
@@ -25,7 +25,7 @@ class Main {
           absentItemNumbers +
           "】的数据，请检查后重试！",
       );
-      return;
+      return false;
     }
 
     RegularProduct.data.forEach((item) => {
@@ -56,7 +56,7 @@ class Main {
       let products = RegularProduct.data.filter(
         (key) => item.itemNumber === key.itemNumber,
       );
-      products.sort(RegularProduct.compare);
+      products.sort(RegularProduct.compareBySize);
       //可售库存
       item.sellableInventory = products.reduce(
         (sum, current) => sum + Number(current.sellableInventory),
@@ -77,6 +77,8 @@ class Main {
         .join("/");
     });
 
+    VipshopGoods.data.sort(VipshopGoods.compareByFirstListingTime);
+
     if (updateWB) {
       DAO.updateWorksheet(
         VipshopGoods.wsName,
@@ -87,9 +89,9 @@ class Main {
           VipshopGoods.optionalKeyToTitle,
         ),
       );
-
-      MsgBox("【" + RegularProduct.wsName + "】" + "更新成功！");
     }
+
+    return true;
   }
 
   static updateProductPrice(updateWB = true) {
@@ -98,7 +100,7 @@ class Main {
       ProductPrice.initializeData();
     } catch (e) {
       MsgBox(e.message);
-      return;
+      return false;
     }
 
     let absentItemNumbers = [];
@@ -118,7 +120,7 @@ class Main {
           absentItemNumbers +
           "】的数据，请检查后重试！",
       );
-      return;
+      return false;
     }
 
     VipshopGoods.data.forEach((item) => {
@@ -144,9 +146,9 @@ class Main {
           VipshopGoods.optionalKeyToTitle,
         ),
       );
-
-      MsgBox("【" + ProductPrice.wsName + "】" + "更新成功！");
     }
+
+    return true;
   }
 
   static updateInventory() {
@@ -156,7 +158,7 @@ class Main {
       Inventory.initializeData();
     } catch (e) {
       MsgBox(e.message);
-      return;
+      return false;
     }
 
     VipshopGoods.data.forEach((item) => {
@@ -271,7 +273,7 @@ class Main {
       ),
     );
 
-    MsgBox("【" + Inventory.wsName + "】" + "更新成功！");
+    return true;
   }
 
   static updateProductSales() {
@@ -280,7 +282,7 @@ class Main {
       ProductSales.initializeData();
     } catch (e) {
       MsgBox(e.message);
-      return;
+      return false;
     }
 
     let today = new Date();
@@ -389,7 +391,121 @@ class Main {
       ),
     );
 
-    MsgBox("【" + ProductSales.wsName + "】" + "更新成功！");
+    return true;
+  }
+
+  static outputReport({ splitFourthLevelCategory = true } = {}) {
+    try {
+      this.updateRegularProduct(false);
+    } catch (e) {
+      MsgBox(e.message);
+      return false;
+    }
+
+    VipshopGoods.data.sort(VipshopGoods.compareByStyleSalesOfLast7Days);
+
+    let outputKeyToTitle = splitFourthLevelCategory
+      ? {
+          listingYear: "上市年份",
+          mainSalesSeason: "主销季节",
+          applicableGender: "适用性别",
+          mainStyle: "主款式",
+          stockingMode: "备货模式",
+          marketingPositioning: "营销定位",
+          marketingMemorandum: "营销备忘录",
+          firstListingTime: "首次上架时间",
+          salesAge: "售龄",
+          designNumber: "设计号",
+          itemNumber: "货号",
+          styleNumber: "款号",
+          picture: "图片",
+          color: "颜色",
+          link: "链接",
+          itemStatus: "商品状态",
+          offlineReason: "下线原因",
+          activityStatus: "活动状态",
+          isPriceBroken: "是否破价",
+          costPrice: "成本价",
+          lowestPrice: "最低价",
+          silverPrice: "白金价",
+          userOperations1: "中台1",
+          userOperations2: "中台2",
+          vipshopPrice: "唯品价",
+          finalPrice: "到手价",
+          firstOrderPrice: "首单价",
+          superVipPrice: "超V价",
+          profit: "利润",
+          profitRate: "利润率",
+          unitPriceOfLast7Days: "近7天件单价",
+          exposureUVOfLast7Days: "近7天曝光UV",
+          productDetailsUVOfLast7Days: "近7天商详UV",
+          addToCartUVOfLast7Days: "近7天加购UV",
+          customerCountOfLast7Days: "近7天客户数",
+          rejectAndReturnCountOfLast7Days: "近7天拒退数",
+          salesQuantityOfLast7Days: "近7天销售量",
+          salesAmountOfLast7Days: "近7天销售额",
+          clickThroughRateOfLast7Days: "近7天点击率",
+          addToCartRateOfLast7Days: "近7天加购率",
+          purchaseRateOfLast7Days: "近7天转化率",
+          rejectAndReturnRateOfLast7Days: "近7天拒退率",
+          styleSalesOfLast7Days: "近7天款销量",
+          sellableInventory: "可售库存",
+          sellableDays: "可售天数",
+          isOutOfStock: "是否断码",
+          totalInventory: "合计库存",
+          finishedGoodsTotalInventory: "成品合计",
+          finishedGoodsMainInventory: "成品主仓",
+          finishedGoodsIncomingInventory: "成品进货",
+          finishedGoodsFinishingInventory: "成品后整",
+          finishedGoodsOversoldInventory: "成品超卖",
+          finishedGoodsPrepareInventory: "成品备货",
+          finishedGoodsReturnInventory: "成品销退",
+          finishedGoodsPurchaseInventory: "成品在途",
+          generalGoodsTotalInventory: "通货合计",
+          generalGoodsMainInventory: "通货主仓",
+          generalGoodsIncomingInventory: "通货进货",
+          generalGoodsFinishingInventory: "通货后整",
+          generalGoodsOversoldInventory: "通货超卖",
+          generalGoodsPrepareInventory: "通货备货",
+          generalGoodsReturnInventory: "通货销退",
+          generalGoodsPurchaseInventory: "通货在途",
+          totalSales: "销量总计",
+        }
+      : VipshopGoods.keyToTitle;
+
+    let fourthLevelCategoryMap = new Map();
+
+    VipshopGoods.data.forEach((item) => {
+      if (item.fourthLevelCategory) {
+        let fourthLevelCategorySet = fourthLevelCategoryMap.get(
+          item.fourthLevelCategory,
+        );
+        if (fourthLevelCategorySet) {
+          fourthLevelCategorySet.add(item.styleNumber);
+        } else {
+          fourthLevelCategoryMap.set(item.fourthLevelCategory, new Set());
+        }
+      }
+    });
+
+    let newWb = DAO.createWorkbook();
+    Workbooks(DAO.wbName)
+      .Sheets(ProductPrice.wsName)
+      .Copy(newWb.Sheets.Item(1));
+
+    for (let entry of fourthLevelCategoryMap) {
+      let outputData = [];
+      for (let value of entry[1]) {
+        let outputItems = VipshopGoods.data.filter(
+          (key) => key.styleNumber == value,
+        );
+        outputData.push(...outputItems);
+        outputData.push([]);
+      }
+
+      newWb.Sheets.Add(null, newWb.Sheets.Item(1), 1).Name = entry[0];
+      DAO.updateWorksheet(entry[0], outputData, outputKeyToTitle, newWb);
+    }
   }
 }
 //货号总表
@@ -402,6 +518,7 @@ class VipshopGoods {
     applicableGender: "适用性别",
     fourthLevelCategory: "四级品类",
     mainStyle: "主款式",
+    stockingMode: "备货模式",
     marketingPositioning: "营销定位",
     marketingMemorandum: "营销备忘录",
     firstListingTime: "首次上架时间",
@@ -445,7 +562,6 @@ class VipshopGoods {
     sellableInventory: "可售库存",
     sellableDays: "可售天数",
     isOutOfStock: "是否断码",
-    stockingMode: "备货模式",
     totalInventory: "合计库存",
     finishedGoodsTotalInventory: "成品合计",
     finishedGoodsMainInventory: "成品主仓",
@@ -488,10 +604,12 @@ class VipshopGoods {
     }
   }
 
-  static checkData() {}
-
   constructor(itemNumber) {
     this.itemNumber = itemNumber;
+  }
+
+  toString() {
+    return this.itemNumber;
   }
 
   get salesAge() {
@@ -502,18 +620,14 @@ class VipshopGoods {
         )
       : "";
   }
-  set salesAge(value) {
-    this._salesAge = value;
-  }
+  set salesAge(value) {}
 
   get link() {
     return this.MID
       ? "https://detail.vip.com/detail-1234-" + this.MID + ".html"
       : "";
   }
-  set link(value) {
-    this._link = value;
-  }
+  set link(value) {}
 
   get activityStatus() {
     if (this.vipshopPrice && this.finalPrice) {
@@ -521,9 +635,7 @@ class VipshopGoods {
     }
     return "(未知)";
   }
-  set activityStatus(value) {
-    this._activityStatus = value;
-  }
+  set activityStatus(value) {}
 
   get isPriceBroken() {
     if (this.finalPrice && this.lowestPrice) {
@@ -531,16 +643,12 @@ class VipshopGoods {
     }
     return "(未知)";
   }
-  set isPriceBroken(value) {
-    this._isPriceBroken = value;
-  }
+  set isPriceBroken(value) {}
 
   get firstOrderPrice() {
     if (this.finalPrice) return +this.finalPrice - +(this.userOperations1 ?? 0);
   }
-  set firstOrderPrice(value) {
-    this._firstOrderPrice = value;
-  }
+  set firstOrderPrice(value) {}
 
   get superVipPrice() {
     let priceInfo = PriceCalculator.priceConfig.find(
@@ -560,9 +668,7 @@ class VipshopGoods {
       );
     }
   }
-  set superVipPrice(value) {
-    this._superVipPrice = value;
-  }
+  set superVipPrice(value) {}
 
   get profit() {
     return PriceCalculator.calProfit(
@@ -573,9 +679,7 @@ class VipshopGoods {
       +(this.userOperations2 ?? 0),
     );
   }
-  set profit(value) {
-    this._profit = value;
-  }
+  set profit(value) {}
 
   get profitRate() {
     return PriceCalculator.calProfitRate(
@@ -586,12 +690,51 @@ class VipshopGoods {
       +(this.userOperations2 ?? 0),
     );
   }
-  set profitRate(value) {
-    this._profitRate = value;
+  set profitRate(value) {}
+
+  static compareByFirstListingTime(VipshopGoodsA, VipshopGoodsB) {
+    // 解析日期为当天开始时间的时间戳
+    const parseDate = (dateStr) => {
+      const timestamp = Date.parse(dateStr);
+      if (isNaN(timestamp)) return 0;
+
+      const date = new Date(timestamp);
+      date.setHours(0, 0, 0, 0);
+      return date.getTime();
+    };
+
+    const firstListingTimeA = parseDate(VipshopGoodsA.firstListingTime);
+    const firstListingTimeB = parseDate(VipshopGoodsB.firstListingTime);
+
+    // 先比较日期
+    if (firstListingTimeA !== firstListingTimeB) {
+      return firstListingTimeB - firstListingTimeA;
+    }
+
+    // 日期相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
   }
 
-  toString() {
-    return this.itemNumber;
+  static compareByStyleSalesOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (
+      VipshopGoodsA.styleSalesOfLast7Days !==
+      VipshopGoodsB.styleSalesOfLast7Days
+    ) {
+      return (
+        VipshopGoodsB.styleSalesOfLast7Days -
+        VipshopGoodsA.styleSalesOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
   }
 }
 
@@ -656,7 +799,7 @@ class RegularProduct {
     this.data = DAO.readWorksheet(this.wsName, this, this.keyToTitle);
   }
 
-  static compare(productA, productB) {
+  static compareBySize(productA, productB) {
     const sizeA = Number(productA.size);
     const sizeB = Number(productB.size);
 
@@ -872,7 +1015,12 @@ class DAO {
     });
   }
 
-  static updateWorksheet(wsName, data, keyToTitle) {
+  static updateWorksheet(
+    wsName,
+    data,
+    keyToTitle,
+    workbook = Workbooks(this.wbName),
+  ) {
     let titleRow = [];
     let showData = [];
 
@@ -889,14 +1037,18 @@ class DAO {
       showData.push(dataRow);
     });
 
-    Workbooks(this.wbName).Sheets(wsName).Cells.ClearContents();
-    Workbooks(this.wbName)
+    workbook.Sheets(wsName).Cells.ClearContents();
+    workbook
       .Sheets(wsName)
       .Range("A1")
       .Resize(showData.length, showData[0].length).Value2 = showData;
+
+    Workbooks(this.wbName).Save();
   }
 
-  static createWorkbook() {}
+  static createWorkbook() {
+    return Workbooks.Add();
+  }
 }
 //工具类
 class Utility {
