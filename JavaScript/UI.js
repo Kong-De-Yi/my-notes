@@ -9,7 +9,7 @@ function UserForm1_CommandButton2_Click() {
     return;
   }
   VipshopGoods.saveVipshopGoods();
-  MsgBox("【" + RegularProduct.wsName + "】更新成功！");
+  MsgBox("【" + RegularProduct.getWsName() + "】更新成功！");
 }
 /**
  * 一键更新
@@ -19,26 +19,41 @@ function UserForm1_CommandButton6_Click() {}
  * 商品价格
  */
 function UserForm1_CommandButton1_Click() {
-  if (Main.updateProductPrice()) {
-    MsgBox("【" + ProductPrice.wsName + "】更新成功！");
+  try {
+    Main.updateProductPrice();
+  } catch (err) {
+    MsgBox(err.message);
+    return;
   }
+  VipshopGoods.saveVipshopGoods();
+  MsgBox("【" + ProductPrice.getWsName() + "】更新成功！");
 }
 /**
  *商品库存
  */
 function UserForm1_CommandButton4_Click() {
-  if (Main.updateInventory()) {
-    MsgBox("【" + Inventory.wsName + "】更新成功！");
+  try {
+    Main.updateInventory();
+  } catch (err) {
+    MsgBox(err.message);
+    return;
   }
+  VipshopGoods.saveVipshopGoods();
+  MsgBox("【" + Inventory.getWsName() + "】更新成功！");
 }
 
 /**
  * 商品销售
  */
 function UserForm1_CommandButton5_Click() {
-  if (Main.updateProductSales()) {
-    MsgBox("【" + ProductSales.wsName + "】更新成功！");
+  try {
+    Main.updateProductSales();
+  } catch (err) {
+    MsgBox(err.message);
+    return;
   }
+  VipshopGoods.saveVipshopGoods();
+  MsgBox("【" + ProductSales.getWsName() + "】更新成功！");
 }
 
 function Macro() {
