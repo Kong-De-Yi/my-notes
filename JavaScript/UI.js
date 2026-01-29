@@ -1,8 +1,13 @@
-/**
- * 常态商品
- */
+// 显式窗口
+function Macro() {
+  UserForm1.ComboBox6.AddItem("上架时间");
+  UserForm1.Show();
+}
+
+//更新常态商品
 function UserForm1_CommandButton2_Click() {
   try {
+    VipshopGoods.initializeData();
     Main.updateRegularProduct();
   } catch (err) {
     MsgBox(err.message);
@@ -11,15 +16,11 @@ function UserForm1_CommandButton2_Click() {
   VipshopGoods.saveVipshopGoods();
   MsgBox("【" + RegularProduct.getWsName() + "】更新成功！");
 }
-/**
- * 一键更新
- */
-function UserForm1_CommandButton6_Click() {}
-/**
- * 商品价格
- */
+
+//更新商品价格
 function UserForm1_CommandButton1_Click() {
   try {
+    VipshopGoods.initializeData();
     Main.updateProductPrice();
   } catch (err) {
     MsgBox(err.message);
@@ -28,11 +29,11 @@ function UserForm1_CommandButton1_Click() {
   VipshopGoods.saveVipshopGoods();
   MsgBox("【" + ProductPrice.getWsName() + "】更新成功！");
 }
-/**
- *商品库存
- */
+
+//更新商品库存
 function UserForm1_CommandButton4_Click() {
   try {
+    VipshopGoods.initializeData();
     Main.updateInventory();
   } catch (err) {
     MsgBox(err.message);
@@ -42,11 +43,10 @@ function UserForm1_CommandButton4_Click() {
   MsgBox("【" + Inventory.getWsName() + "】更新成功！");
 }
 
-/**
- * 商品销售
- */
+//更新商品销售
 function UserForm1_CommandButton5_Click() {
   try {
+    VipshopGoods.initializeData();
     Main.updateProductSales();
   } catch (err) {
     MsgBox(err.message);
@@ -56,15 +56,31 @@ function UserForm1_CommandButton5_Click() {
   MsgBox("【" + ProductSales.getWsName() + "】更新成功！");
 }
 
-function Macro() {
-  UserForm1.ComboBox4.AddItem("上架时间");
-  UserForm1.Show();
+//一键更新
+function UserForm1_CommandButton6_Click() {
+  try {
+    VipshopGoods.initializeData();
+    Main.updateRegularProduct();
+    Main.updateProductPrice();
+    Main.updateInventory();
+    Main.updateProductSales();
+  } catch (err) {
+    MsgBox(err.message);
+    return;
+  }
+  VipshopGoods.saveVipshopGoods();
+  MsgBox("一键更新成功！");
 }
 
-/**
- * UserForm1_CommandButton9_Click Macro
- */
-function UserForm1_CommandButton9_Click() {
+//报表输出
+function UserForm1_CommandButton13_Click() {
+  try {
+    VipshopGoods.initializeData();
+  } catch (err) {
+    MsgBox(err.message);
+    return;
+  }
+
   let keyToTitle = {
     listingYear: "上市年份",
     mainSalesSeason: "主销季节",
@@ -134,145 +150,38 @@ function UserForm1_CommandButton9_Click() {
     keyToTitle[entry[0]] = entry[1];
   }
 
-  let splitByMap = Main.outputReport(true, "fourthLevelCategory");
+  let splitByMap = Main.outputReport({
+    splitWs: true,
+    splitBy: "fourthLevelCategory",
+  });
   let newWb = Workbooks.Add();
-  Workbooks(DAO.wbName).Sheets(ProductPrice.wsName).Copy(newWb.Sheets.Item(1));
+  Workbooks(DAO.getWbName())
+    .Sheets(ProductPrice.getWsName())
+    .Copy(newWb.Sheets.Item(1));
 
   for (let entry of splitByMap) {
     let outputData = [];
     for (let value of entry[1]) {
-      let outputItems = VipshopGoods.data.filter(
-        (key) => key.styleNumber == value,
-      );
+      let outputItems = VipshopGoods.filterVipshopGoods({ styleNumber: value });
+
       outputData.push(...outputItems);
       outputData.push([]);
     }
 
-    newWb.Sheets.Add(null, newWb.Sheets.Item(1), 1).Name = entry[0];
+    let newSt = newWb.Sheets.Add(null, newWb.Sheets.Item(1), 1);
+    newSt.Name = entry[0];
     DAO.updateWorksheet(entry[0], outputData, keyToTitle, newWb);
+    //格式化
+    newSt.UsedRange.Rows("1:1").RowHeight = 30;
+    newSt.Range("A1:S1").Interior.Pattern = xlPatternSolid;
+    newSt.Range("A1:S1").Interior.ThemeColor = 8;
+    newSt.Range("A1:S1").Interior.TintAndShade = 0.8;
+    newSt.UsedRange.Rows("2:1000").RowHeight = 30;
   }
 }
-
 /*
 Sub Macro1()
-'
-' Macro1 Macro
-' 宏由 Administrator 录制，时间: 2026/01/28
-'
 
-'
-    Windows("商品运营表【史努比】.xlsm").Activate
-    Range("A1:W1").Select
-    Selection.Copy
-    Windows("工作簿3").Activate
-    Range("A1:S1").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlPasteSpecialOperationNone, SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
-    Windows("商品运营表【史努比】.xlsm").Activate
-    Range("X1:AF1").Select
-    ActiveWindow.ScrollColumn = 2
-    Range("X1:AG1").Select
-    ActiveWindow.ScrollColumn = 5
-    Range("X1:AJ1").Select
-    ActiveWindow.ScrollColumn = 8
-    Range("X1:AM1").Select
-    ActiveWindow.ScrollColumn = 9
-    Range("X1:AN1").Select
-    ActiveWindow.ScrollColumn = 10
-    Range("X1:AO1").Select
-    ActiveWindow.ScrollColumn = 12
-    Range("X1:AR1").Select
-    ActiveWindow.ScrollColumn = 13
-    Range("X1:AT1").Select
-    ActiveWindow.ScrollColumn = 15
-    Range("X1:AV1").Select
-    ActiveWindow.ScrollColumn = 17
-    Range("X1:AX1").Select
-    ActiveWindow.ScrollColumn = 18
-    Range("X1:BA1").Select
-    ActiveWindow.ScrollColumn = 19
-    Range("X1:AH1").Select
-    Selection.Copy
-    Windows("工作簿3").Activate
-    Range("T1:Y1").Select
-    ActiveWindow.ScrollColumn = 2
-    Range("T1:Z1").Select
-    ActiveWindow.ScrollColumn = 4
-    Range("T1:AB1").Select
-    ActiveWindow.ScrollColumn = 5
-    Range("T1:AC1").Select
-    ActiveWindow.ScrollColumn = 6
-    Range("T1:AD1").Select
-    ActiveWindow.ScrollColumn = 7
-    Range("T1:AE1").Select
-    ActiveWindow.ScrollColumn = 8
-    Range("T1:AF1").Select
-    ActiveWindow.ScrollColumn = 9
-    Range("T1:AG1").Select
-    ActiveWindow.ScrollColumn = 10
-    Range("T1:AD1").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlPasteSpecialOperationNone, SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
-    Windows("商品运营表【史努比】.xlsm").Activate
-    Range("AI1:AU1").Select
-    Selection.Copy
-    Windows("工作簿3").Activate
-    Range("AE1:AI1").Select
-    ActiveWindow.ScrollColumn = 11
-    Range("AE1:AJ1").Select
-    ActiveWindow.ScrollColumn = 13
-    Range("AE1:AL1").Select
-    ActiveWindow.ScrollColumn = 14
-    Range("AE1:AM1").Select
-    ActiveWindow.ScrollColumn = 15
-    Range("AE1:AN1").Select
-    ActiveWindow.ScrollColumn = 17
-    Range("AE1:AP1").Select
-    ActiveWindow.ScrollColumn = 18
-    Range("AE1:AQ1").Select
-    ActiveWindow.ScrollColumn = 19
-    Range("AE1:AR1").Select
-    ActiveWindow.ScrollColumn = 20
-    Range("AE1:AS1").Select
-    ActiveWindow.ScrollColumn = 23
-    Range("AE1:AV1").Select
-    ActiveWindow.ScrollColumn = 26
-    Range("AE1:AY1").Select
-    ActiveWindow.ScrollColumn = 27
-    Range("AE1:AZ1").Select
-    ActiveWindow.ScrollColumn = 28
-    Range("AE1:AQ1").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlPasteSpecialOperationNone, SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
-    Windows("商品运营表【史努比】.xlsm").Activate
-    Range("AV1:AX1").Select
-    Selection.Copy
-    Windows("工作簿3").Activate
-    Range("AR1:AT1").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlPasteSpecialOperationNone, SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
-    Windows("商品运营表【史努比】.xlsm").Activate
-    Range("AY1").Select
-    Selection.Copy
-    Windows("工作簿3").Activate
-    Range("AU1").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlPasteSpecialOperationNone, SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
-    ActiveWindow.ScrollColumn = 41
-    Windows("商品运营表【史努比】.xlsm").Activate
-    Range("AZ1").Select
-    ActiveWindow.ScrollColumn = 37
-    Range("AZ1:BP1").Select
-    Selection.Copy
-    Windows("工作簿3").Activate
-    Range("AV1:BL1").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlPasteSpecialOperationNone, SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
-End Sub
-Sub Macro2()
-'
-' Macro2 Macro
-' 宏由 Administrator 录制，时间: 2026/01/28
 '
 
 '
@@ -293,24 +202,7 @@ Sub Macro3()
         .TintAndShade = 0.8
     End With
     Selection.Font.Name = "微软雅黑 Light"
-    Range("T1:Y1").Select
-    ActiveWindow.ScrollColumn = 2
-    Range("T1:Z1").Select
-    ActiveWindow.ScrollColumn = 3
-    Range("T1:AA1").Select
-    ActiveWindow.ScrollColumn = 4
-    Range("T1:AB1").Select
-    ActiveWindow.ScrollColumn = 5
-    Range("T1:AC1").Select
-    ActiveWindow.ScrollColumn = 7
-    Range("T1:AE1").Select
-    ActiveWindow.ScrollColumn = 9
-    Range("T1:AG1").Select
-    ActiveWindow.ScrollColumn = 11
-    Range("T1:AJ1").Select
-    ActiveWindow.ScrollColumn = 13
-    Range("T1:AL1").Select
-    ActiveWindow.ScrollColumn = 14
+   
     Range("T1:AD1").Select
     With Selection.Interior
         .Pattern = xlPatternSolid

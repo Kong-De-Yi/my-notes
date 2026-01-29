@@ -1,13 +1,26 @@
 class Main {
   static updateRegularProduct() {
     try {
-      VipshopGoods.initializeData();
+      RegularProduct.initializeData();
     } catch (err) {
       throw err;
     }
 
-    let allVipshopGoods = VipshopGoods.filterVipshopGoods();
+    //向货号总表添加新增的常态货号
+    let allRegularProducts = RegularProduct.filterRegularProducts({
+      brandSN: VipshopGoods.getBrandSN(),
+    });
+    allRegularProducts.forEach((item) => {
+      let findItem = VipshopGoods.findVipshopGoods({
+        itemNumber: item.itemNumber,
+      });
 
+      if (!findItem) {
+        VipshopGoods.addVipshopGoods(new VipshopGoods(item.itemNumber));
+      }
+    });
+
+    let allVipshopGoods = VipshopGoods.filterVipshopGoods();
     allVipshopGoods.forEach((item) => {
       let findItem = RegularProduct.findRegularProduct({
         itemNumber: item.itemNumber,
@@ -22,7 +35,6 @@ class Main {
       item.vipshopPrice = findItem.vipshopPrice;
       item.finalPrice = findItem.finalPrice;
       item.sellableDays = findItem.sellableDays;
-      item.brandSN = findItem.brandSN;
 
       let products = RegularProduct.filterRegularProducts({
         itemNumber: item.itemNumber,
@@ -51,13 +63,12 @@ class Main {
 
   static updateProductPrice() {
     try {
-      this.updateRegularProduct();
+      ProductPrice.initializeData();
     } catch (err) {
       throw err;
     }
 
     let allVipshopGoods = VipshopGoods.filterVipshopGoods();
-
     allVipshopGoods.forEach((item) => {
       let findItem = ProductPrice.findProductPrice({
         itemNumber: item.itemNumber,
@@ -75,7 +86,6 @@ class Main {
 
   static updateInventory() {
     try {
-      this.updateRegularProduct();
       ComboProduct.initializeData();
       Inventory.initializeData();
     } catch (err) {
@@ -188,11 +198,14 @@ class Main {
       item.totalInventory =
         item.finishedGoodsTotalInventory + item.generalGoodsTotalInventory;
     });
+
+    //清空组合商品和商品库存
+    ComboProduct.clear();
+    Inventory.clear();
   }
 
   static updateProductSales() {
     try {
-      this.updateRegularProduct();
       ProductSales.initializeData();
     } catch (err) {
       throw err;
@@ -218,7 +231,7 @@ class Main {
     let allVipshopGoods = VipshopGoods.filterVipshopGoods();
 
     allVipshopGoods.forEach((item) => {
-      let findItem = ProductSales.filterProductSales({
+      let findItem = ProductSales.findProductSales({
         itemNumber: item.itemNumber,
         salesDate: dateOfLast7Days,
       });
@@ -279,7 +292,7 @@ class Main {
       for (let prop of Object.keys(VipshopGoods.optionalKeyToTitle)) {
         let findItem = ProductSales.findProductSales({
           itemNumber: item.itemNumber,
-          salesDate: "+" + prop,
+          salesDate: prop.replace(/^\+/, ""),
         });
 
         if (findItem) {
@@ -295,45 +308,51 @@ class Main {
       item.styleSalesOfLast7Days =
         styleSalesOfLast7DaysMap.get(item.styleNumber) ?? 0;
     });
+
+    //清空商品销售表
+    ProductSales.clear();
   }
 
   static outputReport({ splitWs, splitBy } = {}) {
-    try {
-      this.updateRegularProduct(false);
-    } catch (e) {
-      MsgBox(e.message);
-      return false;
-    }
-
-    //排序
-    VipshopGoods.data.sort(VipshopGoods.compareByStyleSalesOfLast7Days);
+    let allVipshopGoods = VipshopGoods.filterVipshopGoods();
+    //默认按7天款销量排序
+    allVipshopGoods.sort(VipshopGoods.compareByStyleSalesOfLast7Days);
 
     if (splitWs) {
       let splitByMap = new Map();
 
-      VipshopGoods.data.forEach((item) => {
+      allVipshopGoods.forEach((item) => {
         if (item[splitBy]) {
           let splitBySet = splitByMap.get(item[splitBy]);
           if (splitBySet) {
             splitBySet.add(item.styleNumber);
           } else {
-            splitByMap.set(item[splitBy], new Set(item.styleNumber));
+            splitByMap.set(item[splitBy], new Set());
+            splitByMap.get(item[splitBy]).add(item.styleNumber);
           }
         }
       });
 
       return splitByMap;
     } else {
-      return VipshopGoods.data;
+      return allVipshopGoods;
     }
+  }
+
+  static signupActivity() {
+    //校验同款不同价
+  }
+  static signUserOperations() {
+    //校验同款不同劵
   }
 }
 
 //货号总表
 class VipshopGoods {
+  static _brandSN = "10000708";
   static _wsName = "货号总表";
+
   static _keyToTitle = {
-    thirdLevelCategory: "三级品类",
     listingYear: "上市年份",
     mainSalesSeason: "主销季节",
     applicableGender: "适用性别",
@@ -342,16 +361,17 @@ class VipshopGoods {
     stockingMode: "备货模式",
     marketingPositioning: "营销定位",
     marketingMemorandum: "营销备忘录",
-    firstListingTime: "首次上架时间",
-    salesAge: "售龄",
+    thirdLevelCategory: "三级品类",
     P_SPU: "P_SPU",
     MID: "MID",
     designNumber: "设计号",
-    itemNumber: "货号",
     styleNumber: "款号",
+    itemNumber: "货号",
     picture: "图片",
     color: "颜色",
     link: "链接",
+    firstListingTime: "首次上架时间",
+    salesAge: "售龄",
     itemStatus: "商品状态",
     offlineReason: "下线原因",
     activityStatus: "活动状态",
@@ -407,9 +427,6 @@ class VipshopGoods {
   static _data = [];
 
   static initializeData() {
-    RegularProduct.initializeData();
-    ProductPrice.initializeData();
-
     this.optionalKeyToTitle = Utility.generateDateKeyToTitle();
     this._data = DAO.readWorksheet(
       this._wsName,
@@ -430,55 +447,6 @@ class VipshopGoods {
           "】，请核查后重试！",
       );
     }
-
-    let absentItemNumbers = [];
-    //货号在商品价格中缺失
-    this._data.forEach((item) => {
-      let findItem = ProductPrice.findProductPrice({
-        itemNumber: item.itemNumber,
-      });
-      if (!findItem) {
-        absentItemNumbers.push(item);
-      }
-    });
-    if (absentItemNumbers.length != 0) {
-      throw new Error(
-        ProductPrice._wsName +
-          "中没有找到货号【" +
-          absentItemNumbers +
-          "】的数据，请检查后重试！",
-      );
-    }
-
-    //货号在常态商品中缺失
-    this._data.forEach((item) => {
-      let findItem = RegularProduct.findRegularProduct({
-        itemNumber: item.itemNumber,
-      });
-      if (!findItem) {
-        absentItemNumbers.push(item);
-      }
-    });
-    if (absentItemNumbers.length != 0) {
-      throw new Error(
-        RegularProduct._wsName +
-          "中没有找到货号【" +
-          absentItemNumbers +
-          "】的数据，请检查后重试！",
-      );
-    }
-
-    //向货号总表添加新增的常态货号
-    let allRegularProducts = RegularProduct.filterRegularProducts(null, true);
-    allRegularProducts.forEach((item) => {
-      let findItem = this.findVipshopGoods({
-        itemNumber: item.itemNumber,
-      });
-
-      if (!findItem) {
-        this.addVipshopGoods(new VipshopGoods(item.itemNumber));
-      }
-    });
   }
 
   constructor(itemNumber) {
@@ -489,6 +457,9 @@ class VipshopGoods {
     return this.itemNumber;
   }
 
+  static getBrandSN() {
+    return this._brandSN;
+  }
   static getWsName() {
     return this._wsName;
   }
@@ -532,7 +503,9 @@ class VipshopGoods {
   set firstOrderPrice(value) {}
 
   get superVipPrice() {
-    let vipDiscountRate = ProductPrice.getVipDiscountRate(this.brandSN);
+    let vipDiscountRate = ProductPrice.getVipDiscountRate(
+      VipshopGoods._brandSN,
+    );
 
     let vipDiscountAmount =
       this.finalPrice > 50
@@ -550,7 +523,7 @@ class VipshopGoods {
 
   get profit() {
     return ProductPrice.calProfit(
-      this.brandSN,
+      VipshopGoods._brandSN,
       +this.costPrice,
       +this.finalPrice,
       +(this.userOperations1 ?? 0),
@@ -561,7 +534,7 @@ class VipshopGoods {
 
   get profitRate() {
     return ProductPrice.calProfitRate(
-      this.brandSN,
+      VipshopGoods._brandSN,
       +this.costPrice,
       +this.finalPrice,
       +(this.userOperations1 ?? 0),
@@ -614,7 +587,7 @@ class VipshopGoods {
     DAO.updateWorksheet(
       this._wsName,
       this._data,
-      Object.assign({}, this._keyToTitle, this._optionalKeyToTitle),
+      Object.assign({}, this._keyToTitle, this.optionalKeyToTitle),
     );
   }
 
@@ -867,19 +840,6 @@ class RegularProduct {
 
   static initializeData() {
     this._data = DAO.readWorksheet(this._wsName, this, this._keyToTitle);
-
-    //条码去重
-    let duplicates = Utility.findDuplicatesByProperty(this._data, [
-      "productCode",
-    ]);
-    if (duplicates.length != 0) {
-      throw new Error(
-        this._wsName +
-          "中存在重复的条码：【" +
-          duplicates +
-          "】，请核查后重试！",
-      );
-    }
   }
 
   static getWsName() {
@@ -901,8 +861,8 @@ class RegularProduct {
     return undefined;
   }
 
-  //查找符合条件的常态商品,支持按货号去重
-  static filterRegularProducts(querys, uniqueItem = false) {
+  //查找符合条件的常态商品
+  static filterRegularProducts(querys) {
     let filterItems = this._data;
     if (querys) {
       filterItems = this._data.filter((item) => {
@@ -915,13 +875,6 @@ class RegularProduct {
       });
     }
 
-    if (uniqueItem) {
-      return filterItems.filter(
-        (item, index, self) =>
-          index ===
-          self.findIndex((obj) => obj["itemNumber"] === item["itemNumber"]),
-      );
-    }
     return filterItems;
   }
 
@@ -954,20 +907,6 @@ class ComboProduct {
 
   static initializeData() {
     this._data = DAO.readWorksheet(this._wsName, this, this._keyToTitle);
-
-    /* //组合商品去重
-    let duplicates = Utility.findDuplicatesByProperty(this._data, [
-      "productCode",
-      "subProductCode",
-    ]);
-    if (duplicates.length != 0) {
-      throw new Error(
-        this._wsName +
-          "中存在重复的数据：【" +
-          duplicates +
-          "】，请核查后重试！",
-      );
-    } */
   }
 
   //查找符合条件的子商品
@@ -989,6 +928,11 @@ class ComboProduct {
     }
 
     return filterItems;
+  }
+
+  //清空组合商品
+  static clear() {
+    DAO.clearWorksheet(this._wsName);
   }
 
   toString() {
@@ -1020,19 +964,6 @@ class Inventory {
 
   static initializeData() {
     this._data = DAO.readWorksheet(this._wsName, this, this._keyToTitle);
-
-    /* //条码去重
-    let duplicates = Utility.findDuplicatesByProperty(this._data, [
-      "productCode",
-    ]);
-    if (duplicates.length != 0) {
-      throw new Error(
-        this._wsName +
-          "中存在重复的条码：【" +
-          duplicates +
-          "】，请核查后重试！",
-      );
-    } */
   }
 
   static getWsName() {
@@ -1052,6 +983,11 @@ class Inventory {
       });
     }
     return undefined;
+  }
+
+  //清空商品库存
+  static clear() {
+    DAO.clearWorksheet(this._wsName);
   }
 
   toString() {
@@ -1079,20 +1015,6 @@ class ProductSales {
 
   static initializeData() {
     this._data = DAO.readWorksheet(this._wsName, this, this._keyToTitle);
-
-    /* //数据去重
-    let duplicates = Utility.findDuplicatesByProperty(this._data, [
-      "salesDate",
-      "itemNumber",
-    ]);
-    if (duplicates.length != 0) {
-      throw new Error(
-        this._wsName +
-          "中存在重复的数据：【" +
-          duplicates +
-          "】，请核查后重试！",
-      );
-    } */
   }
 
   static getWsName() {
@@ -1131,19 +1053,33 @@ class ProductSales {
     return filterItems;
   }
 
+  //清空商品销售
+  static clear() {
+    DAO.clearWorksheet(this._wsName);
+  }
+
   toString() {
     return "日期：【" + this.salesDate + "】,货号：【" + this.itemNumber + "】";
   }
 }
 
 class DAO {
-  static wbName = "商品运营表【史努比】"; //当前工作薄的名称
+  static _wbName = "商品运营表【史努比】"; //当前工作薄的名称
+
+  static getWbName() {
+    return this._wbName;
+  }
 
   static readWorksheet(wsName, objType, keyToTitle, optionalKeyToTitle = {}) {
-    let data = Workbooks(this.wbName)
+    let data = Workbooks(this._wbName)
       .Sheets(wsName)
       .UsedRange.Value2.filter((subArray) => Boolean(subArray.join("")));
     let titleRow = data.shift();
+
+    if (!titleRow) {
+      throw new Error("【" + wsName + "】中没有任何数据，请更新数据后重试！");
+    }
+
     let titleIndex = {};
 
     for (let entry of Object.entries(keyToTitle)) {
@@ -1173,7 +1109,7 @@ class DAO {
     wsName,
     data,
     keyToTitle,
-    workbook = Workbooks(this.wbName),
+    workbook = Workbooks(this._wbName),
   ) {
     let titleRow = [];
     let showData = [];
@@ -1196,8 +1132,16 @@ class DAO {
       .Sheets(wsName)
       .Range("A1")
       .Resize(showData.length, showData[0].length).Value2 = showData;
+    if (workbook == Workbooks(this._wbName)) {
+      Workbooks(this._wbName).Save();
+    }
+  }
 
-    Workbooks(this.wbName).Save();
+  static clearWorksheet(wsName, workbook = Workbooks(this._wbName)) {
+    workbook.Sheets(wsName).Cells.ClearContents();
+    if (workbook == Workbooks(this._wbName)) {
+      Workbooks(this._wbName).Save();
+    }
   }
 }
 //工具类
