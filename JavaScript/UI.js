@@ -1,4 +1,4 @@
-// 显式窗口
+// 显示窗口
 function Macro() {
   UserForm1.ComboBox6.AddItem("上架时间");
   UserForm1.Show();
@@ -154,6 +154,7 @@ function UserForm1_CommandButton13_Click() {
     splitWs: true,
     splitBy: "fourthLevelCategory",
   });
+
   let newWb = Workbooks.Add();
   Workbooks(DAO.getWbName())
     .Sheets(ProductPrice.getWsName())

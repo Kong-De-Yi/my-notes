@@ -206,6 +206,7 @@ class Main {
 
   static updateProductSales() {
     try {
+      SystemRecord.initializeData();
       ProductSales.initializeData();
     } catch (err) {
       throw err;
@@ -226,17 +227,34 @@ class Main {
 
     let dateOfLast7Days = `${startDateYear}-${startDateMonth}-${startDateDay}~${endDateYear}-${endDateMonth}-${endDateDay}`;
 
-    let styleSalesOfLast7DaysMap = new Map();
+    let updateDateOfLast7Days =
+      SystemRecord.getSystemRecord().updateDateOfLast7Days;
+    let needUpdateSystemRecord = false;
 
     let allVipshopGoods = VipshopGoods.filterVipshopGoods();
 
     allVipshopGoods.forEach((item) => {
+      //近7天数据失效清0
+      if (updateDateOfLast7Days != dateOfLast7Days) {
+        item.exposureUVOfLast7Days = 0;
+        item.productDetailsUVOfLast7Days = 0;
+        item.addToCartUVOfLast7Days = 0;
+        item.customerCountOfLast7Days = 0;
+        item.rejectAndReturnCountOfLast7Days = 0;
+        item.salesQuantityOfLast7Days = 0;
+        item.salesAmountOfLast7Days = 0;
+        item.styleSalesOfLast7Days = 0;
+      }
+
       let findItem = ProductSales.findProductSales({
         itemNumber: item.itemNumber,
         salesDate: dateOfLast7Days,
       });
 
       if (findItem) {
+        //需要更新7天数据更新日期
+        needUpdateSystemRecord = true;
+
         item.exposureUVOfLast7Days = +findItem.exposureUV;
         item.productDetailsUVOfLast7Days = +findItem.productDetailsUV;
         item.addToCartUVOfLast7Days = +findItem.addToCartUV;
@@ -245,50 +263,34 @@ class Main {
         item.salesQuantityOfLast7Days = +findItem.salesQuantity;
         item.salesAmountOfLast7Days = +findItem.salesAmount;
 
-        item.unitPriceOfLast7Days =
-          item.salesQuantityOfLast7Days == 0
-            ? ""
-            : item.salesAmountOfLast7Days / item.salesQuantityOfLast7Days;
-        item.clickThroughRateOfLast7Days =
-          item.exposureUVOfLast7Days == 0
-            ? ""
-            : item.productDetailsUVOfLast7Days / item.exposureUVOfLast7Days;
-        item.addToCartRateOfLast7Days =
-          item.productDetailsUVOfLast7Days == 0
-            ? ""
-            : item.addToCartUVOfLast7Days / item.productDetailsUVOfLast7Days;
-        item.purchaseRateOfLast7Days =
-          item.productDetailsUVOfLast7Days == 0
-            ? ""
-            : item.customerCountOfLast7Days / item.productDetailsUVOfLast7Days;
-        item.rejectAndReturnRateOfLast7Days =
-          item.salesQuantityOfLast7Days == 0
-            ? ""
-            : item.rejectAndReturnCountOfLast7Days /
-              item.salesQuantityOfLast7Days;
-
-        //近7天款销量
-        let styleSalesOfLast7Days = styleSalesOfLast7DaysMap.get(
-          item.styleNumber,
-        );
-
-        if (!styleSalesOfLast7Days) {
-          styleSalesOfLast7DaysMap.set(
-            item.styleNumber,
-            +findItem.salesQuantity,
-          );
-        } else {
-          styleSalesOfLast7DaysMap.set(
-            item.styleNumber,
-            styleSalesOfLast7Days + +findItem.salesQuantity,
-          );
-        }
-
         item.firstListingTime = findItem.firstListingTime
           ? "'" + findItem.firstListingTime
           : "";
       }
 
+      item.unitPriceOfLast7Days =
+        item.salesQuantityOfLast7Days == 0
+          ? ""
+          : item.salesAmountOfLast7Days / item.salesQuantityOfLast7Days;
+      item.clickThroughRateOfLast7Days =
+        item.exposureUVOfLast7Days == 0
+          ? ""
+          : item.productDetailsUVOfLast7Days / item.exposureUVOfLast7Days;
+      item.addToCartRateOfLast7Days =
+        item.productDetailsUVOfLast7Days == 0
+          ? ""
+          : item.addToCartUVOfLast7Days / item.productDetailsUVOfLast7Days;
+      item.purchaseRateOfLast7Days =
+        item.productDetailsUVOfLast7Days == 0
+          ? ""
+          : item.customerCountOfLast7Days / item.productDetailsUVOfLast7Days;
+      item.rejectAndReturnRateOfLast7Days =
+        item.salesQuantityOfLast7Days == 0
+          ? ""
+          : item.rejectAndReturnCountOfLast7Days /
+            item.salesQuantityOfLast7Days;
+
+      //更新年，月，日销量
       for (let prop of Object.keys(VipshopGoods.optionalKeyToTitle)) {
         let findItem = ProductSales.findProductSales({
           itemNumber: item.itemNumber,
@@ -304,11 +306,37 @@ class Main {
       }
     });
 
-    allVipshopGoods.forEach((item) => {
-      item.styleSalesOfLast7Days =
-        styleSalesOfLast7DaysMap.get(item.styleNumber) ?? 0;
-    });
+    //需要更新近7天款销量
+    if (needUpdateSystemRecord) {
+      let styleSalesOfLast7DaysMap = new Map();
 
+      allVipshopGoods.forEach((item) => {
+        let styleSalesOfLast7Days = styleSalesOfLast7DaysMap.get(
+          item.styleNumber,
+        );
+
+        if (!styleSalesOfLast7Days) {
+          styleSalesOfLast7DaysMap.set(
+            item.styleNumber,
+            item.salesQuantityOfLast7Days,
+          );
+        } else {
+          styleSalesOfLast7DaysMap.set(
+            item.styleNumber,
+            styleSalesOfLast7Days + item.salesQuantityOfLast7Days,
+          );
+        }
+      });
+
+      //更新近7天款销量字段
+      allVipshopGoods.forEach((item) => {
+        item.styleSalesOfLast7Days =
+          styleSalesOfLast7DaysMap.get(item.styleNumber) ?? 0;
+      });
+
+      SystemRecord.getSystemRecord().updateDateOfLast7Days = dateOfLast7Days;
+      SystemRecord.updateSystemRecord();
+    }
     //清空商品销售表
     ProductSales.clear();
   }
@@ -359,6 +387,7 @@ class VipshopGoods {
     fourthLevelCategory: "四级品类",
     mainStyle: "主款式",
     stockingMode: "备货模式",
+    offlineReason: "下线原因",
     marketingPositioning: "营销定位",
     marketingMemorandum: "营销备忘录",
     thirdLevelCategory: "三级品类",
@@ -373,7 +402,6 @@ class VipshopGoods {
     firstListingTime: "首次上架时间",
     salesAge: "售龄",
     itemStatus: "商品状态",
-    offlineReason: "下线原因",
     activityStatus: "活动状态",
     isPriceBroken: "是否破价",
     costPrice: "成本价",
@@ -582,6 +610,7 @@ class VipshopGoods {
 
   //保存货号总表
   static saveVipshopGoods() {
+    //默认按上架时间排序
     this._data.sort(VipshopGoods.compareByFirstListingTime);
 
     DAO.updateWorksheet(
@@ -1060,6 +1089,38 @@ class ProductSales {
 
   toString() {
     return "日期：【" + this.salesDate + "】,货号：【" + this.itemNumber + "】";
+  }
+}
+
+//系统记录
+class SystemRecord {
+  static _wsName = "系统记录";
+  static _keyToTitle = {
+    updateDateOfLast7Days: "近7天数据更新日期",
+    reservedField: "预留字段",
+  };
+
+  static _data = [];
+
+  static initializeData() {
+    this._data = DAO.readWorksheet(this._wsName, this, this._keyToTitle);
+  }
+
+  constructor() {
+    for (let key of Object.keys(SystemRecord._keyToTitle)) {
+      this[key] = undefined;
+    }
+    SystemRecord._data.push(this);
+  }
+
+  //返回记录
+  static getSystemRecord() {
+    return this._data[0] ? this._data[0] : new SystemRecord();
+  }
+
+  //更新记录
+  static updateSystemRecord() {
+    DAO.updateWorksheet(this._wsName, this._data, this._keyToTitle);
   }
 }
 
