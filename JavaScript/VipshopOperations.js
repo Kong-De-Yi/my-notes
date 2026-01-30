@@ -291,7 +291,7 @@ class Main {
             item.salesQuantityOfLast7Days;
 
       //更新年，月，日销量
-      for (let prop of Object.keys(VipshopGoods.optionalKeyToTitle)) {
+      for (let prop of Object.keys(VipshopGoods.getOptionalKeyToTitle())) {
         let findItem = ProductSales.findProductSales({
           itemNumber: item.itemNumber,
           salesDate: prop.replace(/^\+/, ""),
@@ -451,16 +451,16 @@ class VipshopGoods {
     totalSales: "销量总计",
   };
 
-  static optionalKeyToTitle = {};
+  static _optionalKeyToTitle = {};
   static _data = [];
 
   static initializeData() {
-    this.optionalKeyToTitle = Utility.generateDateKeyToTitle();
+    this._optionalKeyToTitle = Utility.generateDateKeyToTitle();
     this._data = DAO.readWorksheet(
       this._wsName,
       this,
       this._keyToTitle,
-      this.optionalKeyToTitle,
+      this._optionalKeyToTitle,
     );
 
     //货号去重
@@ -483,6 +483,14 @@ class VipshopGoods {
 
   toString() {
     return this.itemNumber;
+  }
+
+  static getOptionalKeyToTitle() {
+    return this._optionalKeyToTitle;
+  }
+
+  static getFullKeyToTitle() {
+    return Object.assign({}, this._keyToTitle, this._optionalKeyToTitle);
   }
 
   static getBrandSN() {
@@ -616,7 +624,7 @@ class VipshopGoods {
     DAO.updateWorksheet(
       this._wsName,
       this._data,
-      Object.assign({}, this._keyToTitle, this.optionalKeyToTitle),
+      Object.assign({}, this._keyToTitle, this._optionalKeyToTitle),
     );
   }
 
