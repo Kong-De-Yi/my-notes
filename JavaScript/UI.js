@@ -1,7 +1,7 @@
 // 显示窗口
 function Macro() {
-  UserForm1.ComboBox4.AddItem(Object.values(SelectItem.splitBy));
-  UserForm1.ComboBox6.AddItem("上架时间");
+  UserForm1.ComboBox4.AddItem(["四级品类", "三级品类", "主销季节"]);
+  UserForm1.ComboBox6.AddItem(["上架时间", "近7天款销量"]);
   UserForm1.Show();
 }
 
@@ -77,59 +77,10 @@ function UserForm1_CommandButton6_Click() {
 function UserForm1_CommandButton13_Click() {
   try {
     VipshopGoods.initializeData();
+    Main.outputReport();
   } catch (err) {
     MsgBox(err.message);
     return;
   }
-
-  let keyToTitle = VipshopGoods.getFullKeyToTitle();
-
-  let splitByMap = Main.outputReport({
-    splitWs: true,
-    splitBy: SelectItem.getSplitBy(),
-  });
-
-  Workbooks(DAO._wbName).Sheets(VipshopGoods.getWsName()).Copy();
-  let newWb = ActiveWorkbook;
-
-  for (let entry of splitByMap) {
-    let outputData = [];
-    for (let value of entry[1]) {
-      let outputItems = VipshopGoods.filterVipshopGoods({ styleNumber: value });
-
-      outputData.push(...outputItems);
-      outputData.push([]);
-    }
-    let worksheetCount = newWb.Worksheets.Count;
-    newWb
-      .Sheets(VipshopGoods.getWsName())
-      .Copy(null, newWb.Worksheets(worksheetCount));
-    let newSt = ActiveSheet;
-    newSt.Name = entry[0];
-
-    DAO.updateWorksheet(entry[0], outputData, keyToTitle, newWb);
-    //隐藏非必要列
-    if (UserForm1.CheckBox38.Value) {
-      hideNonessentialColumns(newSt);
-    }
-  }
-}
-
-function hideNonessentialColumns(wt) {
-  wt.Columns("K:L").EntireColumn.Hidden = true;
-  wt.Columns("BA:BG").EntireColumn.Hidden = true;
-  wt.Columns("BI:BO").EntireColumn.Hidden = true;
-}
-//选项配置类
-class SelectItem {
-  static splitBy = {
-    thirdLevelCategory: "三级品类",
-    fourthLevelCategory: "四级品类",
-    mainSalesSeason: "主销季节",
-  };
-  static getSplitBy() {
-    return Object.entries(this.splitBy).find(
-      (item) => item[1] == UserForm1.Combobox4.Value,
-    )[0];
-  }
+  MsgBox("报表输出成功！");
 }

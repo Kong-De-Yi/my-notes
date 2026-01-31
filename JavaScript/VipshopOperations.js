@@ -341,29 +341,82 @@ class Main {
     ProductSales.clear();
   }
 
-  static outputReport({ splitWs, splitBy } = {}) {
+  static outputReport() {
+    //拆分工作表选项
+    let splitByOption = new Map([
+      ["", "brandSN"],
+      ["三级品类", "thirdLevelCategory"],
+      ["四级品类", "fourthLevelCategory"],
+      ["主销季节", "mainSalesSeason"],
+    ]);
+    //排序选项
+    let sortOption = new Map([
+      ["上架时间#true", VipshopGoods.compareByFirstListingTime],
+      ["上架时间#false", VipshopGoods.compareByFirstListingTimeDesc],
+      ["近7天款销量#true", VipshopGoods.compareByStyleSalesOfLast7Days],
+      ["近7天款销量#false", VipshopGoods.compareByStyleSalesOfLast7DaysDesc],
+    ]);
+
+    let keyToTitle = VipshopGoods.getFullKeyToTitle();
+    //根据筛选条件获取货号总表数据
     let allVipshopGoods = VipshopGoods.filterVipshopGoods();
-    //默认按7天款销量排序
-    allVipshopGoods.sort(VipshopGoods.compareByStyleSalesOfLast7Days);
 
-    if (splitWs) {
-      let splitByMap = new Map();
+    let sortBy = sortOption.get(
+      UserForm1.ComboBox6.Value + "#" + UserForm1.OptionButton26.Value,
+    );
+    allVipshopGoods.sort(sortBy);
 
-      allVipshopGoods.forEach((item) => {
-        if (item[splitBy]) {
-          let splitBySet = splitByMap.get(item[splitBy]);
-          if (splitBySet) {
+    let splitBy = splitByOption.get(UserForm1.ComboBox4.Value);
+
+    let splitByMap = new Map();
+
+    allVipshopGoods.forEach((item) => {
+      if (item[splitBy]) {
+        let splitBySet = splitByMap.get(item[splitBy]);
+        if (splitBySet) {
+          if (!splitBySet.has(item.styleNumber)) {
             splitBySet.add(item.styleNumber);
-          } else {
-            splitByMap.set(item[splitBy], new Set());
-            splitByMap.get(item[splitBy]).add(item.styleNumber);
           }
+        } else {
+          splitByMap.set(item[splitBy], new Set());
+          splitByMap.get(item[splitBy]).add(item.styleNumber);
         }
-      });
+      }
+    });
 
-      return splitByMap;
-    } else {
-      return allVipshopGoods;
+    Workbooks(DAO._wbName).Sheets(VipshopGoods.getWsName()).Copy();
+    let newWb = ActiveWorkbook;
+
+    for (let entry of splitByMap) {
+      let outputData = [];
+      for (let value of entry[1]) {
+        let outputItems = VipshopGoods.filterVipshopGoods({
+          styleNumber: value,
+        });
+
+        outputData.push(...outputItems);
+        outputData.push([]);
+      }
+      let worksheetCount = newWb.Worksheets.Count;
+      newWb
+        .Sheets(VipshopGoods.getWsName())
+        .Copy(null, newWb.Worksheets(worksheetCount));
+      let newSt = ActiveSheet;
+      newSt.Name = entry[0].replace(/\//g, "");
+
+      DAO.updateWorksheet(
+        entry[0].replace(/\//g, ""),
+        outputData,
+        keyToTitle,
+        newWb,
+      );
+      //隐藏非必要列
+      if (UserForm1.CheckBox38.Value) {
+        newSt.Columns("A:E").EntireColumn.Hidden = true;
+        newSt.Columns("J:L").EntireColumn.Hidden = true;
+        newSt.Columns("BA:BG").EntireColumn.Hidden = true;
+        newSt.Columns("BI:BO").EntireColumn.Hidden = true;
+      }
     }
   }
 
@@ -479,6 +532,7 @@ class VipshopGoods {
 
   constructor(itemNumber) {
     this.itemNumber = itemNumber;
+    this.brandSN = VipshopGoods._brandSN;
   }
 
   toString() {
@@ -539,9 +593,7 @@ class VipshopGoods {
   set firstOrderPrice(value) {}
 
   get superVipPrice() {
-    let vipDiscountRate = ProductPrice.getVipDiscountRate(
-      VipshopGoods._brandSN,
-    );
+    let vipDiscountRate = ProductPrice.getVipDiscountRate(this.brandSN);
 
     let vipDiscountAmount =
       this.finalPrice > 50
@@ -559,7 +611,7 @@ class VipshopGoods {
 
   get profit() {
     return ProductPrice.calProfit(
-      VipshopGoods._brandSN,
+      this.brandSN,
       +this.costPrice,
       +this.finalPrice,
       +(this.userOperations1 ?? 0),
@@ -570,7 +622,7 @@ class VipshopGoods {
 
   get profitRate() {
     return ProductPrice.calProfitRate(
-      VipshopGoods._brandSN,
+      this.brandSN,
       +this.costPrice,
       +this.finalPrice,
       +(this.userOperations1 ?? 0),
@@ -644,7 +696,7 @@ class VipshopGoods {
 
     // 先比较日期
     if (firstListingTimeA !== firstListingTimeB) {
-      return firstListingTimeB - firstListingTimeA;
+      return firstListingTimeA - firstListingTimeB;
     }
 
     // 日期相同再比较款式号（按字符串排序）
@@ -654,6 +706,13 @@ class VipshopGoods {
     return styleA.localeCompare(styleB);
   }
 
+  static compareByFirstListingTimeDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByFirstListingTime(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
   static compareByStyleSalesOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
     // 先比较销量
     if (
@@ -661,8 +720,8 @@ class VipshopGoods {
       VipshopGoodsB.styleSalesOfLast7Days
     ) {
       return (
-        VipshopGoodsB.styleSalesOfLast7Days -
-        VipshopGoodsA.styleSalesOfLast7Days
+        VipshopGoodsA.styleSalesOfLast7Days -
+        VipshopGoodsB.styleSalesOfLast7Days
       );
     }
 
@@ -671,6 +730,13 @@ class VipshopGoods {
     const styleB = String(VipshopGoodsB.styleNumber || "");
 
     return styleA.localeCompare(styleB);
+  }
+
+  static compareByStyleSalesOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByStyleSalesOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
   }
 }
 
