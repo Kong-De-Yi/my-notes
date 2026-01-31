@@ -25,16 +25,17 @@ class Main {
       let findItem = RegularProduct.findRegularProduct({
         itemNumber: item.itemNumber,
       });
-
-      item.thirdLevelCategory = findItem.thirdLevelCategory;
-      item.P_SPU = findItem.P_SPU;
-      item.MID = findItem.MID;
-      item.styleNumber = findItem.styleNumber;
-      item.color = findItem.color;
-      item.itemStatus = findItem.itemStatus;
-      item.vipshopPrice = findItem.vipshopPrice;
-      item.finalPrice = findItem.finalPrice;
-      item.sellableDays = findItem.sellableDays;
+      if (findItem) {
+        item.thirdLevelCategory = findItem.thirdLevelCategory;
+        item.P_SPU = findItem.P_SPU;
+        item.MID = findItem.MID;
+        item.styleNumber = findItem.styleNumber;
+        item.color = findItem.color;
+        item.itemStatus = findItem.itemStatus;
+        item.vipshopPrice = findItem.vipshopPrice;
+        item.finalPrice = findItem.finalPrice;
+        item.sellableDays = findItem.sellableDays;
+      }
 
       let products = RegularProduct.filterRegularProducts({
         itemNumber: item.itemNumber,
@@ -73,14 +74,15 @@ class Main {
       let findItem = ProductPrice.findProductPrice({
         itemNumber: item.itemNumber,
       });
-
-      item.designNumber = findItem.designNumber;
-      item.picture = findItem.picture;
-      item.costPrice = findItem.costPrice;
-      item.lowestPrice = findItem.lowestPrice;
-      item.silverPrice = findItem.silverPrice;
-      item.userOperations1 = findItem.userOperations1;
-      item.userOperations2 = findItem.userOperations2;
+      if (findItem) {
+        item.designNumber = findItem.designNumber;
+        item.picture = findItem.picture;
+        item.costPrice = findItem.costPrice;
+        item.lowestPrice = findItem.lowestPrice;
+        item.silverPrice = findItem.silverPrice;
+        item.userOperations1 = findItem.userOperations1;
+        item.userOperations2 = findItem.userOperations2;
+      }
     });
   }
 
@@ -517,9 +519,7 @@ class VipshopGoods {
     );
 
     //货号去重
-    let duplicates = Utility.findDuplicatesByProperty(this._data, [
-      "itemNumber",
-    ]);
+    let duplicates = Utility.findDuplicatesByProperty(this._data, "itemNumber");
     if (duplicates.length != 0) {
       throw new Error(
         this._wsName +
@@ -581,7 +581,7 @@ class VipshopGoods {
 
   get isPriceBroken() {
     if (this.finalPrice && this.lowestPrice) {
-      return +this.lowestPrice >= +this.finalPrice ? "" : "是";
+      return +this.lowestPrice > +this.finalPrice ? "" : "是";
     }
     return "(未知)";
   }
@@ -636,7 +636,7 @@ class VipshopGoods {
     if (querys) {
       return this._data.find((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
@@ -652,7 +652,7 @@ class VipshopGoods {
     if (querys) {
       filterItems = this._data.filter((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
@@ -670,14 +670,10 @@ class VipshopGoods {
 
   //保存货号总表
   static saveVipshopGoods() {
-    //默认按上架时间排序
-    this._data.sort(VipshopGoods.compareByFirstListingTime);
+    //默认按上架时间降序排序
+    this._data.sort(VipshopGoods.compareByFirstListingTimeDesc);
 
-    DAO.updateWorksheet(
-      this._wsName,
-      this._data,
-      Object.assign({}, this._keyToTitle, this._optionalKeyToTitle),
-    );
+    DAO.updateWorksheet(this._wsName, this._data, this.getFullKeyToTitle());
   }
 
   static compareByFirstListingTime(VipshopGoodsA, VipshopGoodsB) {
@@ -811,9 +807,7 @@ class ProductPrice {
     this._data = DAO.readWorksheet(this._wsName, this, this._keyToTitle);
 
     //货号去重
-    let duplicates = Utility.findDuplicatesByProperty(this._data, [
-      "itemNumber",
-    ]);
+    let duplicates = Utility.findDuplicatesByProperty(this._data, "itemNumber");
     if (duplicates.length != 0) {
       throw new Error(
         this._wsName +
@@ -832,7 +826,7 @@ class ProductPrice {
     if (querys) {
       return this._data.find((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
@@ -954,7 +948,7 @@ class RegularProduct {
     if (querys) {
       return this._data.find((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
@@ -970,14 +964,13 @@ class RegularProduct {
     if (querys) {
       filterItems = this._data.filter((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
         return true;
       });
     }
-
     return filterItems;
   }
 
@@ -1020,6 +1013,7 @@ class ComboProduct {
         for (let entry of Object.entries(querys)) {
           if (
             item[entry[0]] != entry[1] ||
+            !item[entry[0]] ||
             item.subProductCode.startsWith("YH") ||
             item.subProductCode.startsWith("FL")
           ) {
@@ -1078,7 +1072,7 @@ class Inventory {
     if (querys) {
       return this._data.find((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
@@ -1129,7 +1123,7 @@ class ProductSales {
     if (querys) {
       return this._data.find((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
@@ -1145,14 +1139,13 @@ class ProductSales {
     if (querys) {
       filterItems = this._data.filter((item) => {
         for (let entry of Object.entries(querys)) {
-          if (item[entry[0]] != entry[1]) {
+          if (item[entry[0]] != entry[1] || !item[entry[0]]) {
             return false;
           }
         }
         return true;
       });
     }
-
     return filterItems;
   }
 
@@ -1313,14 +1306,13 @@ class Utility {
     return result;
   }
 
-  //检查重复项目
-  static findDuplicatesByProperty(data, props) {
+  //检查单字段重复项目
+  static findDuplicatesByProperty(data, prop) {
     let seen = new Set();
     let duplicates = [];
 
     data.forEach((item) => {
-      let value = props.map((prop) => item[prop]).join("#");
-
+      let value = item[prop];
       if (seen.has(value) && value) {
         duplicates.push(item);
       } else {
