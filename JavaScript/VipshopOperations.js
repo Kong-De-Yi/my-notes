@@ -440,7 +440,7 @@ class VipshopGoods {
     mainSalesSeason: "主销季节",
     applicableGender: "适用性别",
     fourthLevelCategory: "四级品类",
-    mainStyle: "主款式",
+    operationClassification: "运营分类",
     stockingMode: "备货模式",
     offlineReason: "下线原因",
     marketingPositioning: "营销定位",
