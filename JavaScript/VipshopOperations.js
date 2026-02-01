@@ -573,17 +573,17 @@ class VipshopGoods {
 
   get activityStatus() {
     if (this.vipshopPrice && this.finalPrice) {
-      return +this.vipshopPrice > +this.finalPrice ? "活动中" : "";
+      return +this.vipshopPrice > +this.finalPrice ? "活动中" : "未提报";
     }
-    return "(未知)";
+    return "";
   }
   set activityStatus(value) {}
 
   get isPriceBroken() {
     if (this.finalPrice && this.lowestPrice) {
-      return +this.lowestPrice > +this.finalPrice ? "" : "是";
+      return +this.lowestPrice > +this.finalPrice ? "是" : "否";
     }
-    return "(未知)";
+    return "";
   }
   set isPriceBroken(value) {}
 
@@ -661,6 +661,95 @@ class VipshopGoods {
     }
 
     return filterItems;
+  }
+  //多条件查询
+  static filterVipshopGoodsByMultiCondition(querys) {
+    let VipShopGoodsForQuerys = this._data;
+    for (let query of Object.entries(querys)) {
+      if (!query[0]) continue;
+
+      switch (query[0]) {
+        case "mainSalesSeason":
+          let seasons = query[1].split("/");
+          VipShopGoodsForQuerys = seasons.reduce((result, current) => {
+            let filteredVipshopGoods = VipShopGoodsForQuerys.filter(
+              (item) => item.mainSalesSeason == current,
+            );
+            result.push(...filteredVipshopGoods);
+            return result;
+          }, []);
+          break;
+
+        case "applicableGender":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item.applicableGender == query[1],
+          );
+          break;
+
+        case "itemStatus":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item.itemStatus == query[1],
+          );
+          break;
+
+        case "offlineReason":
+          if (query[1] == "正常下线") {
+            VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+              (item) => item.offlineReason == "正常下线",
+            );
+          } else {
+            VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+              (item) => item.offlineReason != "正常下线" && item.offlineReason,
+            );
+          }
+          break;
+
+        case "salesAge":
+          let startToEnd = query[1].split("-");
+          let start = startToEnd[0];
+          let end = startToEnd[1];
+
+          if (start) {
+            if (end) {
+              VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+                (item) => +item.salesAge >= +start && +item.salesAge <= +end,
+              );
+            } else {
+              VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+                (item) => +item.salesAge >= +start,
+              );
+            }
+          } else {
+            VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+              (item) => +item.salesAge <= +end,
+            );
+          }
+          break;
+
+        case "marketingPositioning":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item.marketingPositioning == query[1],
+          );
+          break;
+
+        case "activityStatus":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item.activityStatus == query[1],
+          );
+          break;
+
+        case "userOperations1":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item.userOperations1,
+          );
+          break;
+
+        case "userOperations2":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item.userOperations2,
+          );
+      }
+    }
   }
 
   //添加新的商品
