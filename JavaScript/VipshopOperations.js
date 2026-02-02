@@ -575,15 +575,15 @@ class VipshopGoods {
     if (this.vipshopPrice && this.finalPrice) {
       return +this.vipshopPrice > +this.finalPrice ? "活动中" : "未提报";
     }
-    return "";
+    return "(未知)";
   }
   set activityStatus(value) {}
 
   get isPriceBroken() {
     if (this.finalPrice && this.lowestPrice) {
-      return +this.lowestPrice > +this.finalPrice ? "是" : "否";
+      return +this.lowestPrice > +this.finalPrice ? "是" : "";
     }
-    return "";
+    return "(未知)";
   }
   set isPriceBroken(value) {}
 
@@ -666,7 +666,7 @@ class VipshopGoods {
   static filterVipshopGoodsByMultiCondition(querys) {
     let VipShopGoodsForQuerys = this._data;
     for (let query of Object.entries(querys)) {
-      if (!query[0]) continue;
+      if (!query[1]) continue;
 
       switch (query[0]) {
         case "mainSalesSeason":
@@ -678,18 +678,6 @@ class VipshopGoods {
             result.push(...filteredVipshopGoods);
             return result;
           }, []);
-          break;
-
-        case "applicableGender":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => item.applicableGender == query[1],
-          );
-          break;
-
-        case "itemStatus":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => item.itemStatus == query[1],
-          );
           break;
 
         case "offlineReason":
@@ -704,7 +692,36 @@ class VipshopGoods {
           }
           break;
 
+        case "isComboProduct":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => +item.generalGoodsTotalInventory > 1,
+          );
+          break;
+
+        case "userOperations1":
+        case "userOperations2":
+        case "isOutOfStock":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item[query[0]],
+          );
+          break;
+
+        case "applicableGender":
+        case "itemStatus":
+        case "marketingPositioning":
+        case "activityStatus":
+        case "stockingMode":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item[query[0]] == query[1],
+          );
+          break;
+
         case "salesAge":
+        case "profit":
+        case "profitRate":
+        case "sellableInventory":
+        case "sellableDays":
+        case "salesQuantityOfLast7Days":
           let startToEnd = query[1].split("-");
           let start = startToEnd[0];
           let end = startToEnd[1];
@@ -712,44 +729,28 @@ class VipshopGoods {
           if (start) {
             if (end) {
               VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-                (item) => +item.salesAge >= +start && +item.salesAge <= +end,
+                (item) => +item[query[0]] >= +start && +item[query[0]] <= +end,
               );
             } else {
               VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-                (item) => +item.salesAge >= +start,
+                (item) => +item[query[0]] >= +start,
               );
             }
           } else {
             VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-              (item) => +item.salesAge <= +end,
+              (item) => +item[query[0]] <= +end,
             );
           }
           break;
 
-        case "marketingPositioning":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => item.marketingPositioning == query[1],
+        case "topProductsBySales":
+          VipShopGoodsForQuerys.sort(
+            VipshopGoods.compareBySalesQuantityOfLast7DaysDesc,
           );
-          break;
-
-        case "activityStatus":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => item.activityStatus == query[1],
-          );
-          break;
-
-        case "userOperations1":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => item.userOperations1,
-          );
-          break;
-
-        case "userOperations2":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => item.userOperations2,
-          );
+          VipShopGoodsForQuerys.slice(0, query[1]);
       }
     }
+    return VipShopGoodsForQuerys;
   }
 
   //添加新的商品
@@ -819,6 +820,32 @@ class VipshopGoods {
 
   static compareByStyleSalesOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
     return -VipshopGoods.compareByStyleSalesOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  static compareBySalesQuantityOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (
+      VipshopGoodsA.salesQuantityOfLast7Days !==
+      VipshopGoodsB.salesQuantityOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.salesQuantityOfLast7Days -
+        VipshopGoodsB.salesQuantityOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  static compareBySalesQuantityOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareBySalesQuantityOfLast7Days(
       VipshopGoodsA,
       VipshopGoodsB,
     );
