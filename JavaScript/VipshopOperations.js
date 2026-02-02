@@ -385,24 +385,32 @@ class Main {
         : (selectOption.mainSalesSeason = ["四季"]);
     }
 
-    if (UserForm1.OptionButton9.Value) {
-      selectOption.applicableGender = "男童";
+    if (UserForm1.CheckBox14.Value) {
+      selectOption.applicableGender = ["男童"];
     }
-    if (UserForm1.OptionButton10.Value) {
-      selectOption.applicableGender = "女童";
+    if (UserForm1.CheckBox15.Value) {
+      selectOption.applicableGender
+        ? selectOption.applicableGender.push("女童")
+        : (selectOption.applicableGender = ["女童"]);
     }
-    if (UserForm1.OptionButton11.Value) {
-      selectOption.applicableGender = "中性";
+    if (UserForm1.CheckBox16.Value) {
+      selectOption.applicableGender
+        ? selectOption.applicableGender.push("中性")
+        : (selectOption.applicableGender = ["中性"]);
     }
 
-    if (UserForm1.OptionButton18.Value) {
-      selectOption.itemStatus = "商品上线";
+    if (UserForm1.CheckBox17.Value) {
+      selectOption.itemStatus = ["商品上线"];
     }
-    if (UserForm1.OptionButton21.Value) {
-      selectOption.itemStatus = "部分上线";
+    if (UserForm1.CheckBox18.Value) {
+      selectOption.itemStatus
+        ? selectOption.itemStatus.push("部分上线")
+        : (selectOption.itemStatus = ["部分上线"]);
     }
-    if (UserForm1.OptionButton22.Value) {
-      selectOption.itemStatus = "商品下线";
+    if (UserForm1.CheckBox19.Value) {
+      selectOption.itemStatus
+        ? selectOption.itemStatus.push("商品下线")
+        : (selectOption.itemStatus = ["商品下线"]);
     }
 
     if (UserForm1.OptionButton27.Value) {
@@ -429,14 +437,18 @@ class Main {
       }
     }
 
-    if (UserForm1.OptionButton17.Value) {
-      selectOption.marketingPositioning = "引流款";
+    if (UserForm1.CheckBox20.Value) {
+      selectOption.marketingPositioning = ["引流款"];
     }
-    if (UserForm1.OptionButton16.VAlue) {
-      selectOption.marketingPositioning = "利润款";
+    if (UserForm1.CheckBox21.Value) {
+      selectOption.marketingPositioning
+        ? selectOption.marketingPositioning.push("利润款")
+        : (selectOption.marketingPositioning = ["利润款"]);
     }
-    if (UserForm1.OptionButton15.Value) {
-      selectOption.marketingPositioning = "清仓款";
+    if (UserForm1.CheckBox22.Value) {
+      selectOption.marketingPositioning
+        ? selectOption.marketingPositioning.push("清仓款")
+        : (selectOption.marketingPositioning = ["清仓款"]);
     }
 
     if (UserForm1.OptionButton23.Value) {
@@ -494,14 +506,18 @@ class Main {
       selectOption.isPriceBroken = true;
     }
 
-    if (UserForm1.OptionButton12.Value) {
-      selectOption.stockingMode = "现货";
+    if (UserForm1.CheckBox23.Value) {
+      selectOption.stockingMode = ["现货"];
     }
-    if (UserForm1.OptionButton13.Value) {
-      selectOption.stockingMode = "通版通货";
+    if (UserForm1.CheckBox24.Value) {
+      selectOption.stockingMode
+        ? selectOption.stockingMode.push("通版通货")
+        : (selectOption.stockingMode = ["通版通货"]);
     }
-    if (UserForm1.OptionButton14.Value) {
-      selectOption.stockingMode = "专版通货";
+    if (UserForm1.CheckBox25.Value) {
+      selectOption.stockingMode
+        ? selectOption.stockingMode.push("专版通货")
+        : (selectOption.stockingMode = ["专版通货"]);
     }
 
     if (UserForm1.TextEdit7.Value) {
@@ -917,9 +933,13 @@ class VipshopGoods {
 
       switch (query[0]) {
         case "mainSalesSeason":
+        case "applicableGender":
+        case "itemStatus":
+        case "marketingPositioning":
+        case "stockingMode":
           VipShopGoodsForQuerys = query[1].reduce((result, current) => {
             let filteredVipshopGoods = VipShopGoodsForQuerys.filter(
-              (item) => item.mainSalesSeason == current,
+              (item) => item[query[0]] == current,
             );
             result.push(...filteredVipshopGoods);
             return result;
@@ -933,7 +953,7 @@ class VipshopGoods {
             );
           } else {
             VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-              (item) => item.offlineReason != "正常下线" && item.offlineReason,
+              (item) => item.offlineReason != "正常下线",
             );
           }
           break;
@@ -952,11 +972,7 @@ class VipshopGoods {
           );
           break;
 
-        case "applicableGender":
-        case "itemStatus":
-        case "marketingPositioning":
         case "activityStatus":
-        case "stockingMode":
           VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
             (item) => item[query[0]] == query[1],
           );
