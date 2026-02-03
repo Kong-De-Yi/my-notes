@@ -16,7 +16,9 @@ class Main {
       });
 
       if (!findItem) {
-        VipshopGoods.addVipshopGoods(new VipshopGoods(item.itemNumber));
+        let newItem = new VipshopGoods(item.itemNumber);
+        newItem.marketingPositioning = "利润款";
+        VipshopGoods.addVipshopGoods(newItem);
       }
     });
 
@@ -357,12 +359,14 @@ class Main {
       userOperations2: undefined,
       profit: undefined,
       profitRate: undefined,
-      isOutOfStock: undefined,
+      isPriceBroken: undefined,
       stockingMode: undefined,
       sellableInventory: undefined,
-      sellableDays: undefined,
-      isComboProduct: undefined,
       isOutOfStock: undefined,
+      sellableDays: undefined,
+      finishedGoodsTotalInventory: undefined,
+      generalGoodsTotalInventory: undefined,
+      totalInventory: undefined,
       salesQuantityOfLast7Days: undefined,
       topProductsBySales: undefined,
     };
@@ -413,11 +417,18 @@ class Main {
         : (selectOption.itemStatus = ["商品下线"]);
     }
 
-    if (UserForm1.OptionButton27.Value) {
-      selectOption.offlineReason = "正常下线";
+    if (UserForm1.CheckBox27.Value) {
+      selectOption.offlineReason = ["主动下线"];
     }
-    if (UserForm1.OptionButton28.Value) {
-      selectOption.offlineReason = "非正常下线";
+    if (UserForm1.CheckBox28.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("平台下线")
+        : (selectOption.offlineReason = ["平台下线"]);
+    }
+    if (UserForm1.CheckBox29.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("不明原因")
+        : (selectOption.offlineReason = ["不明原因"]);
     }
 
     if (UserForm1.TextEdit1.Value) {
@@ -543,6 +554,10 @@ class Main {
       }
     }
 
+    if (UserForm1.CheckBox12.Value) {
+      selectOption.isOutOfStock = true;
+    }
+
     if (UserForm1.TextEdit9.Value) {
       if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit9.Value)) {
         throw new Error("可售天数输入必须是一个有效的数字");
@@ -566,12 +581,77 @@ class Main {
       }
     }
 
-    if (UserForm1.CheckBox11.Value) {
-      selectOption.isComboProduct = true;
+    if (UserForm1.TextEdit17.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit17.Value)) {
+        throw new Error("成品库存输入必须是一个有效的数字");
+      }
+      selectOption.finishedGoodsTotalInventory = [
+        Number(UserForm1.TextEdit17.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit18.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit18.Value)) {
+        throw new Error("成品库存输入必须是一个有效的数字");
+      }
+      if (selectOption.finishedGoodsTotalInventory) {
+        selectOption.finishedGoodsTotalInventory[1] = Number(
+          UserForm1.TextEdit18.Value,
+        );
+      } else {
+        selectOption.finishedGoodsTotalInventory = [
+          undefined,
+          Number(UserForm1.TextEdit18.Value),
+        ];
+      }
     }
 
-    if (UserForm1.CheckBox12.Value) {
-      selectOption.isOutOfStock = true;
+    if (UserForm1.TextEdit19.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit19.Value)) {
+        throw new Error("通货库存输入必须是一个有效的数字");
+      }
+      selectOption.generalGoodsTotalInventory = [
+        Number(UserForm1.TextEdit19.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit20.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit20.Value)) {
+        throw new Error("通货库存输入必须是一个有效的数字");
+      }
+      if (selectOption.generalGoodsTotalInventory) {
+        selectOption.generalGoodsTotalInventory[1] = Number(
+          UserForm1.TextEdit20.Value,
+        );
+      } else {
+        selectOption.generalGoodsTotalInventory = [
+          undefined,
+          Number(UserForm1.TextEdit20.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.TextEdit21.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit21.Value)) {
+        throw new Error("合计库存输入必须是一个有效的数字");
+      }
+      selectOption.totalInventory = [
+        Number(UserForm1.TextEdit21.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit22.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit22.Value)) {
+        throw new Error("合计库存输入必须是一个有效的数字");
+      }
+      if (selectOption.totalInventory) {
+        selectOption.totalInventory[1] = Number(UserForm1.TextEdit22.Value);
+      } else {
+        selectOption.totalInventory = [
+          undefined,
+          Number(UserForm1.TextEdit22.Value),
+        ];
+      }
     }
 
     if (UserForm1.TextEdit14.Value) {
@@ -681,6 +761,7 @@ class Main {
         newSt.Columns("J:L").EntireColumn.Hidden = true;
         newSt.Columns("BA:BG").EntireColumn.Hidden = true;
         newSt.Columns("BI:BO").EntireColumn.Hidden = true;
+        newSt.Columns("BQ:CE").EntireColumn.Hidden = true;
       }
     }
   }
@@ -947,21 +1028,29 @@ class VipshopGoods {
           break;
 
         case "offlineReason":
-          if (query[1] == "正常下线") {
-            VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-              (item) => item.offlineReason == "正常下线",
-            );
-          } else {
-            VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-              (item) => item.offlineReason != "正常下线",
-            );
-          }
-          break;
+          VipShopGoodsForQuerys = query[1].reduce((result, current) => {
+            let filteredVipshopGoods = VipShopGoodsForQuerys.filter((item) => {
+              if (current == "主动下线") {
+                return (
+                  item[query[0]] == "非应季" ||
+                  item[query[0]] == "换吊牌" ||
+                  item[query[0]] == "转品牌" ||
+                  item[query[0]] == "清仓淘汰"
+                );
+              } else if (current == "平台下线") {
+                return (
+                  item[query[0]] == "内网撞款" ||
+                  item[query[0]] == "资质问题" ||
+                  item[query[0]] == "内在质检"
+                );
+              } else if (current == "不明原因") {
+                return !item[query[0]];
+              }
+            });
+            result.push(...filteredVipshopGoods);
+            return result;
+          }, []);
 
-        case "isComboProduct":
-          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
-            (item) => +item.generalGoodsTotalInventory > 1,
-          );
           break;
 
         case "userOperations1":
@@ -978,11 +1067,20 @@ class VipshopGoods {
           );
           break;
 
+        case "isPriceBroken":
+          VipShopGoodsForQuerys = VipShopGoodsForQuerys.filter(
+            (item) => item[query[0]] == "是",
+          );
+          break;
+
         case "salesAge":
         case "profit":
         case "profitRate":
         case "sellableInventory":
         case "sellableDays":
+        case "finishedGoodsTotalInventory":
+        case "generalGoodsTotalInventory":
+        case "totalInventory":
         case "salesQuantityOfLast7Days":
           let start =
             query[0] == "profitRate" ? query[1][0] / 100 : query[1][0];
