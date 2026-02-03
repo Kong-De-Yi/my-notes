@@ -689,16 +689,81 @@ class Main {
     //拆分工作表选项
     let splitByOption = new Map([
       ["", "brandSN"],
-      ["三级品类", "thirdLevelCategory"],
+      ["上市年份", "listingYear"],
       ["四级品类", "fourthLevelCategory"],
-      ["主销季节", "mainSalesSeason"],
+      ["运营分类", "operationClassification"],
+      ["下线原因", "offlineReason"],
+      ["三级品类", "thirdLevelCategory"],
     ]);
     //排序选项
     let sortOption = new Map([
-      ["上架时间#true", VipshopGoods.compareByFirstListingTime],
-      ["上架时间#false", VipshopGoods.compareByFirstListingTimeDesc],
+      ["首次上架时间#true", VipshopGoods.compareByFirstListingTime],
+      ["首次上架时间#false", VipshopGoods.compareByFirstListingTimeDesc],
+      ["成本价#true", VipshopGoods.compareByCostPrice],
+      ["成本价#false", VipshopGoods.compareByCostPriceDesc],
+      ["白金价#true", VipshopGoods.compareBySilverPrice],
+      ["白金价#false", VipshopGoods.compareBySilverPriceDesc],
+      ["利润#true", VipshopGoods.compareByProfit],
+      ["利润#false", VipshopGoods.compareByProfitDesc],
+      ["利润率#true", VipshopGoods.compareByProfitRate],
+      ["利润率#false", VipshopGoods.compareByProfitRateDesc],
+      ["近7天件单价#true", VipshopGoods.compareByUnitPriceOfLast7Days],
+      ["近7天件单价#false", VipshopGoods.compareByUnitPriceOfLast7DaysDesc],
+      ["近7天曝光UV#true", VipshopGoods.compareByExposureUVOfLast7Days],
+      ["近7天曝光UV#false", VipshopGoods.compareByExposureUVOfLast7DaysDesc],
+      ["近7天商详UV#true", VipshopGoods.compareByProductDetailsUVOfLast7Days],
+      [
+        "近7天商详UV#false",
+        VipshopGoods.compareByProductDetailsUVOfLast7DaysDesc,
+      ],
+      ["近7天加购UV#true", VipshopGoods.compareByAddToCartUVOfLast7Days],
+      ["近7天加购UV#false", VipshopGoods.compareByAddToCartUVOfLast7DaysDesc],
+      ["近7天客户数#true", VipshopGoods.compareByCustomerCountOfLast7Days],
+      ["近7天客户数#false", VipshopGoods.compareByCustomerCountOfLast7DaysDesc],
+      [
+        "近7天拒退数#true",
+        VipshopGoods.compareByRejectAndReturnCountOfLast7Days,
+      ],
+      [
+        "近7天拒退数#false",
+        VipshopGoods.compareByRejectAndReturnCountOfLast7DaysDesc,
+      ],
+      ["近7天销售量#true", VipshopGoods.compareBySalesQuantityOfLast7Days],
+      ["近7天销售量#false", VipshopGoods.compareBySalesQuantityOfLast7DaysDesc],
+      ["近7天销售额#true", VipshopGoods.compareBySalesAmountOfLast7Days],
+      ["近7天销售额#false", VipshopGoods.compareBySalesAmountOfLast7DaysDesc],
+      ["近7天点击率#true", VipshopGoods.compareByClickThroughRateOfLast7Days],
+      [
+        "近7天点击率#false",
+        VipshopGoods.compareByClickThroughRateOfLast7DaysDesc,
+      ],
+      ["近7天加购率#true", VipshopGoods.compareByAddToCartRateOfLast7Days],
+      ["近7天加购率#false", VipshopGoods.compareByAddToCartRateOfLast7DaysDesc],
+      ["近7天转化率#true", VipshopGoods.compareByPurchaseRateOfLast7Days],
+      ["近7天转化率#false", VipshopGoods.compareByPurchaseRateOfLast7DaysDesc],
+      [
+        "近7天拒退率#true",
+        VipshopGoods.compareByRejectAndReturnRateOfLast7Days,
+      ],
+      [
+        "近7天拒退率#false",
+        VipshopGoods.compareByRejectAndReturnRateOfLast7DaysDesc,
+      ],
       ["近7天款销量#true", VipshopGoods.compareByStyleSalesOfLast7Days],
       ["近7天款销量#false", VipshopGoods.compareByStyleSalesOfLast7DaysDesc],
+
+      ["可售库存#true", VipshopGoods.compareBySellableInventory],
+      ["可售库存#false", VipshopGoods.compareBySellableInventoryDesc],
+      ["可售天数#true", VipshopGoods.compareBySellableDays],
+      ["可售天数#false", VipshopGoods.compareBySellableDaysDesc],
+      ["合计库存#true", VipshopGoods.compareByTotalInventory],
+      ["合计库存#false", VipshopGoods.compareByTotalInventoryDesc],
+      ["成品合计#true", VipshopGoods.compareByFinishedGoodsTotalInventory],
+      ["成品合计#false", VipshopGoods.compareByFinishedGoodsTotalInventoryDesc],
+      ["通货合计#true", VipshopGoods.compareByGeneralGoodsTotalInventory],
+      ["通货合计#false", VipshopGoods.compareByGeneralGoodsTotalInventoryDesc],
+      ["销量总计#true", VipshopGoods.compareByTotalSales],
+      ["销量总计#false", VipshopGoods.compareByTotalSalesDesc],
     ]);
 
     let keyToTitle = VipshopGoods.getFullKeyToTitle();
@@ -747,10 +812,10 @@ class Main {
         .Sheets(VipshopGoods.getWsName())
         .Copy(null, newWb.Worksheets(worksheetCount));
       let newSt = ActiveSheet;
-      newSt.Name = entry[0].replace(/\//g, "");
+      newSt.Name = String(entry[0]).replace(/\//g, "");
 
       DAO.updateWorksheet(
-        entry[0].replace(/\//g, ""),
+        String(entry[0]).replace(/\//g, ""),
         outputData,
         keyToTitle,
         newWb,
@@ -960,6 +1025,9 @@ class VipshopGoods {
       +this.finalPrice,
       +(this.userOperations1 ?? 0),
       +(this.userOperations2 ?? 0),
+      this.rejectAndReturnRateOfLast7Days
+        ? +this.rejectAndReturnRateOfLast7Days
+        : undefined,
     );
   }
   set profit(value) {}
@@ -971,6 +1039,9 @@ class VipshopGoods {
       +this.finalPrice,
       +(this.userOperations1 ?? 0),
       +(this.userOperations2 ?? 0),
+      this.rejectAndReturnRateOfLast7Days
+        ? +this.rejectAndReturnRateOfLast7Days
+        : undefined,
     );
   }
   set profitRate(value) {}
@@ -1126,6 +1197,7 @@ class VipshopGoods {
     DAO.updateWorksheet(this._wsName, this._data, this.getFullKeyToTitle());
   }
 
+  //首次上架时间升序
   static compareByFirstListingTime(VipshopGoodsA, VipshopGoodsB) {
     // 解析日期为当天开始时间的时间戳
     const parseDate = (dateStr) => {
@@ -1152,6 +1224,7 @@ class VipshopGoods {
     return styleA.localeCompare(styleB);
   }
 
+  //首次上架时间降序
   static compareByFirstListingTimeDesc(VipshopGoodsA, VipshopGoodsB) {
     return -VipshopGoods.compareByFirstListingTime(
       VipshopGoodsA,
@@ -1159,15 +1232,85 @@ class VipshopGoods {
     );
   }
 
-  static compareByStyleSalesOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
-    // 先比较销量
+  //成本价升序
+  static compareByCostPrice(VipshopGoodsA, VipshopGoodsB) {
+    if (VipshopGoodsA.costPrice !== VipshopGoodsB.costPrice) {
+      return VipshopGoodsA.costPrice - VipshopGoodsB.costPrice;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //成本价降序
+  static compareByCostPriceDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByCostPrice(VipshopGoodsA, VipshopGoodsB);
+  }
+
+  //白金价升序
+  static compareBySilverPrice(VipshopGoodsA, VipshopGoodsB) {
+    if (VipshopGoodsA.silverPrice !== VipshopGoodsB.silverPrice) {
+      return VipshopGoodsA.silverPrice - VipshopGoodsB.silverPrice;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //白金价降序
+  static compareBySilverPriceDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareBySilverPrice(VipshopGoodsA, VipshopGoodsB);
+  }
+
+  //利润升序
+  static compareByProfit(VipshopGoodsA, VipshopGoodsB) {
+    if (VipshopGoodsA.profit !== VipshopGoodsB.profit) {
+      return VipshopGoodsA.profit - VipshopGoodsB.profit;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //利润降序
+  static compareByProfitDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByProfit(VipshopGoodsA, VipshopGoodsB);
+  }
+
+  //利润率升序
+  static compareByProfitRate(VipshopGoodsA, VipshopGoodsB) {
+    if (VipshopGoodsA.profitRate !== VipshopGoodsB.profitRate) {
+      return VipshopGoodsA.profitRate - VipshopGoodsB.profitRate;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //利润率降序
+  static compareByProfitRateDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByProfitRate(VipshopGoodsA, VipshopGoodsB);
+  }
+
+  //近7天件单价升序
+  static compareByUnitPriceOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
     if (
-      VipshopGoodsA.styleSalesOfLast7Days !==
-      VipshopGoodsB.styleSalesOfLast7Days
+      VipshopGoodsA.unitPriceOfLast7Days !== VipshopGoodsB.unitPriceOfLast7Days
     ) {
       return (
-        VipshopGoodsA.styleSalesOfLast7Days -
-        VipshopGoodsB.styleSalesOfLast7Days
+        VipshopGoodsA.unitPriceOfLast7Days - VipshopGoodsB.unitPriceOfLast7Days
       );
     }
 
@@ -1178,13 +1321,159 @@ class VipshopGoods {
     return styleA.localeCompare(styleB);
   }
 
-  static compareByStyleSalesOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
-    return -VipshopGoods.compareByStyleSalesOfLast7Days(
+  //近7天件单价降序
+  static compareByUnitPriceOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByUnitPriceOfLast7Days(
       VipshopGoodsA,
       VipshopGoodsB,
     );
   }
 
+  //近7天曝光UV升序
+  static compareByExposureUVOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.exposureUVOfLast7Days !==
+      VipshopGoodsB.exposureUVOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.exposureUVOfLast7Days -
+        VipshopGoodsB.exposureUVOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天曝光UV降序
+  static compareByExposureUVOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByExposureUVOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天商详UV升序
+  static compareByProductDetailsUVOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.productDetailsUVOfLast7Days !==
+      VipshopGoodsB.productDetailsUVOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.productDetailsUVOfLast7Days -
+        VipshopGoodsB.productDetailsUVOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天商详UV降序
+  static compareByProductDetailsUVOfLast7DaysDesc(
+    VipshopGoodsA,
+    VipshopGoodsB,
+  ) {
+    return -VipshopGoods.compareByProductDetailsUVOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天加购UV升序
+  static compareByAddToCartUVOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.addToCartUVOfLast7Days !==
+      VipshopGoodsB.addToCartUVOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.addToCartUVOfLast7Days -
+        VipshopGoodsB.addToCartUVOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天加购UV降序
+  static compareByAddToCartUVOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByAddToCartUVOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天客户数升序
+  static compareByCustomerCountOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.customerCountOfLast7Days !==
+      VipshopGoodsB.customerCountOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.customerCountOfLast7Days -
+        VipshopGoodsB.customerCountOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天客户数降序
+  static compareByCustomerCountOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByCustomerCountOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天拒退数升序
+  static compareByRejectAndReturnCountOfLast7Days(
+    VipshopGoodsA,
+    VipshopGoodsB,
+  ) {
+    if (
+      VipshopGoodsA.rejectAndReturnCountOfLast7Days !==
+      VipshopGoodsB.rejectAndReturnCountOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.rejectAndReturnCountOfLast7Days -
+        VipshopGoodsB.rejectAndReturnCountOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天拒退数降序
+  static compareByRejectAndReturnCountOfLast7DaysDesc(
+    VipshopGoodsA,
+    VipshopGoodsB,
+  ) {
+    return -VipshopGoods.compareByRejectAndReturnCountOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天销售量升序
   static compareBySalesQuantityOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
     // 先比较销量
     if (
@@ -1204,11 +1493,319 @@ class VipshopGoods {
     return styleA.localeCompare(styleB);
   }
 
+  //近7天销售量降序
   static compareBySalesQuantityOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
     return -VipshopGoods.compareBySalesQuantityOfLast7Days(
       VipshopGoodsA,
       VipshopGoodsB,
     );
+  }
+
+  //近7天销售额升序
+  static compareBySalesAmountOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.salesAmountOfLast7Days !==
+      VipshopGoodsB.salesAmountOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.salesAmountOfLast7Days -
+        VipshopGoodsB.salesAmountOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天销售额降序
+  static compareBySalesAmountOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareBySalesAmountOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天点击率升序
+  static compareByClickThroughRateOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.clickThroughRateOfLast7Days !==
+      VipshopGoodsB.clickThroughRateOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.clickThroughRateOfLast7Days -
+        VipshopGoodsB.clickThroughRateOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天点击率降序
+  static compareByClickThroughRateOfLast7DaysDesc(
+    VipshopGoodsA,
+    VipshopGoodsB,
+  ) {
+    return -VipshopGoods.compareByClickThroughRateOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天加购率升序
+  static compareByAddToCartRateOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.addToCartRateOfLast7Days !==
+      VipshopGoodsB.addToCartRateOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.addToCartRateOfLast7Days -
+        VipshopGoodsB.addToCartRateOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天加购率降序
+  static compareByAddToCartRateOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByAddToCartRateOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天转化率升序
+  static compareByPurchaseRateOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.purchaseRateOfLast7Days !==
+      VipshopGoodsB.purchaseRateOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.purchaseRateOfLast7Days -
+        VipshopGoodsB.purchaseRateOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天转化率降序
+  static compareByPurchaseRateOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByPurchaseRateOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天拒退率升序
+  static compareByRejectAndReturnRateOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    if (
+      VipshopGoodsA.rejectAndReturnRateOfLast7Days !==
+      VipshopGoodsB.rejectAndReturnRateOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.rejectAndReturnRateOfLast7Days -
+        VipshopGoodsB.rejectAndReturnRateOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天拒退率降序
+  static compareByRejectAndReturnRateOfLast7DaysDesc(
+    VipshopGoodsA,
+    VipshopGoodsB,
+  ) {
+    return -VipshopGoods.compareByRejectAndReturnRateOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //近7天款销量升序
+  static compareByStyleSalesOfLast7Days(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (
+      VipshopGoodsA.styleSalesOfLast7Days !==
+      VipshopGoodsB.styleSalesOfLast7Days
+    ) {
+      return (
+        VipshopGoodsA.styleSalesOfLast7Days -
+        VipshopGoodsB.styleSalesOfLast7Days
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //近7天款销量降序
+  static compareByStyleSalesOfLast7DaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByStyleSalesOfLast7Days(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //可售库存升序
+  static compareBySellableInventory(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (VipshopGoodsA.sellableInventory !== VipshopGoodsB.sellableInventory) {
+      return VipshopGoodsA.sellableInventory - VipshopGoodsB.sellableInventory;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //可售库存降序
+  static compareBySellableInventoryDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareBySellableInventory(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //可售天数升序
+  static compareBySellableDays(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (VipshopGoodsA.sellableDays !== VipshopGoodsB.sellableDays) {
+      return VipshopGoodsA.sellableDays - VipshopGoodsB.sellableDays;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //可售天数降序
+  static compareBySellableDaysDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareBySellableDays(VipshopGoodsA, VipshopGoodsB);
+  }
+
+  //合计库存升序
+  static compareByTotalInventory(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (VipshopGoodsA.totalInventory !== VipshopGoodsB.totalInventory) {
+      return VipshopGoodsA.totalInventory - VipshopGoodsB.totalInventory;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //合计库存降序
+  static compareByTotalInventoryDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByTotalInventory(VipshopGoodsA, VipshopGoodsB);
+  }
+
+  //成品合计升序
+  static compareByFinishedGoodsTotalInventory(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (
+      VipshopGoodsA.finishedGoodsTotalInventory !==
+      VipshopGoodsB.finishedGoodsTotalInventory
+    ) {
+      return (
+        VipshopGoodsA.finishedGoodsTotalInventory -
+        VipshopGoodsB.finishedGoodsTotalInventory
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //成品合计降序
+  static compareByFinishedGoodsTotalInventoryDesc(
+    VipshopGoodsA,
+    VipshopGoodsB,
+  ) {
+    return -VipshopGoods.compareByFinishedGoodsTotalInventory(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //通货合计升序
+  static compareByGeneralGoodsTotalInventory(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (
+      VipshopGoodsA.generalGoodsTotalInventory !==
+      VipshopGoodsB.generalGoodsTotalInventory
+    ) {
+      return (
+        VipshopGoodsA.generalGoodsTotalInventory -
+        VipshopGoodsB.generalGoodsTotalInventory
+      );
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //通货合计降序
+  static compareByGeneralGoodsTotalInventoryDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByGeneralGoodsTotalInventory(
+      VipshopGoodsA,
+      VipshopGoodsB,
+    );
+  }
+
+  //销量总计升序
+  static compareByTotalSales(VipshopGoodsA, VipshopGoodsB) {
+    // 先比较销量
+    if (VipshopGoodsA.totalSales !== VipshopGoodsB.totalSales) {
+      return VipshopGoodsA.totalSales - VipshopGoodsB.totalSales;
+    }
+
+    // 销量相同再比较款式号（按字符串排序）
+    const styleA = String(VipshopGoodsA.styleNumber || "");
+    const styleB = String(VipshopGoodsB.styleNumber || "");
+
+    return styleA.localeCompare(styleB);
+  }
+
+  //销量总计降序
+  static compareByTotalSalesDesc(VipshopGoodsA, VipshopGoodsB) {
+    return -VipshopGoods.compareByTotalSales(VipshopGoodsA, VipshopGoodsB);
   }
 }
 
@@ -1232,7 +1829,6 @@ class ProductPrice {
       brand: "LAVI",
       packagingFee: 1.5, //发货打包费
       shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
       returnProcessingFee: 1.8, //退货整理费
       vipDiscountRate: 0.05, //超V优惠比例
       vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
@@ -1244,7 +1840,6 @@ class ProductPrice {
       brand: "巴帝巴帝",
       packagingFee: 1.5, //发货打包费
       shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
       returnProcessingFee: 1.8, //退货整理费
       vipDiscountRate: 0.05, //超V优惠比例
       vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
@@ -1256,7 +1851,6 @@ class ProductPrice {
       brand: "史努比",
       packagingFee: 1.5, //发货打包费
       shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
       returnProcessingFee: 1.8, //退货整理费
       vipDiscountRate: 0.02, //超V优惠比例
       vipDiscountBearingRatio: 0, //超V优惠商家承担比例
@@ -1268,7 +1862,6 @@ class ProductPrice {
       brand: "小猪班纳",
       packagingFee: 1.5, //发货打包费
       shippingCost: 1.5, //发货运费
-      returnRate: 0.3, //退货率
       returnProcessingFee: 1.8, //退货整理费
       vipDiscountRate: 0.05, //超V优惠比例
       vipDiscountBearingRatio: 0.6, //超V优惠商家承担比例
@@ -1319,16 +1912,16 @@ class ProductPrice {
     salesPrice,
     userOperations1 = 0,
     userOperations2 = 0,
+    returnRate = 0.3,
   ) {
     let priceInfo = this._priceConfig.find((item) => item.brandSN === brandSN);
     if (!priceInfo) {
       throw new Error("没有找到品牌SN【" + brandSN + "】的价格信息，请核实！");
     }
 
-    const packagingFee = 1.5; //发货打包费
-    const shippingCost = 1.5; //发货运费
-    const returnRate = 0.3; //退货率
-    const returnProcessingFee = 1.8; //退货整理费
+    const packagingFee = priceInfo.packagingFee; //发货打包费
+    const shippingCost = priceInfo.shippingCost; //发货运费
+    const returnProcessingFee = priceInfo.returnProcessingFee; //退货整理费
     const vipDiscountRate = priceInfo.vipDiscountRate; //超V优惠比例
     const vipDiscountBearingRatio = priceInfo.vipDiscountBearingRatio; //超V优惠商家承担比例
     const platformCommission = priceInfo.platformCommission; //平台扣点
@@ -1364,6 +1957,7 @@ class ProductPrice {
     salesPrice,
     userOperations1 = 0,
     userOperations2 = 0,
+    returnRate = 0.3,
   ) {
     let profit = this.calProfit(
       brandSN,
@@ -1371,6 +1965,7 @@ class ProductPrice {
       salesPrice,
       userOperations1,
       userOperations2,
+      returnRate,
     );
     return Number((profit / costPrice).toFixed(5));
   }
