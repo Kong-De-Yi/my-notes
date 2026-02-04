@@ -43,6 +43,10 @@ function UserForm1_CommandButton2_Click() {
     Main.updateRegularProduct();
   } catch (err) {
     MsgBox(err.message);
+    if (err instanceof CustomError) {
+      let wb = Workbooks.Add();
+      DAO.updateWorksheet("Sheet1", err.data, err.keyToTitle, wb);
+    }
     return;
   }
   VipshopGoods.saveVipshopGoods();
@@ -56,6 +60,10 @@ function UserForm1_CommandButton1_Click() {
     Main.updateProductPrice();
   } catch (err) {
     MsgBox(err.message);
+    if (err instanceof CustomError) {
+      let wb = Workbooks.Add();
+      DAO.updateWorksheet("Sheet1", err.data, err.keyToTitle, wb);
+    }
     return;
   }
   VipshopGoods.saveVipshopGoods();
@@ -69,6 +77,10 @@ function UserForm1_CommandButton4_Click() {
     Main.updateInventory();
   } catch (err) {
     MsgBox(err.message);
+    if (err instanceof CustomError) {
+      let wb = Workbooks.Add();
+      DAO.updateWorksheet("Sheet1", err.data, err.keyToTitle, wb);
+    }
     return;
   }
   VipshopGoods.saveVipshopGoods();
@@ -82,6 +94,10 @@ function UserForm1_CommandButton5_Click() {
     Main.updateProductSales();
   } catch (err) {
     MsgBox(err.message);
+    if (err instanceof CustomError) {
+      let wb = Workbooks.Add();
+      DAO.updateWorksheet("Sheet1", err.data, err.keyToTitle, wb);
+    }
     return;
   }
   VipshopGoods.saveVipshopGoods();
@@ -98,6 +114,10 @@ function UserForm1_CommandButton6_Click() {
     Main.updateProductSales();
   } catch (err) {
     MsgBox(err.message);
+    if (err instanceof CustomError) {
+      let wb = Workbooks.Add();
+      DAO.updateWorksheet("Sheet1", err.data, err.keyToTitle, wb);
+    }
     return;
   }
   VipshopGoods.saveVipshopGoods();
@@ -111,6 +131,10 @@ function UserForm1_CommandButton13_Click() {
     Main.outputReport();
   } catch (err) {
     MsgBox(err.message);
+    if (err instanceof CustomError) {
+      let wb = Workbooks.Add();
+      DAO.updateWorksheet("Sheet1", err.data, err.keyToTitle, wb);
+    }
     return;
   }
   MsgBox("报表输出成功！");

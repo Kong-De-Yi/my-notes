@@ -62,6 +62,11 @@ class Main {
         }, [])
         .join("/");
     });
+
+    //更新系统记录
+    SystemRecord.getSystemRecord().updateDateOfRegularProduct =
+      Utility.generateStringOfToday();
+    SystemRecord.updateSystemRecord();
   }
 
   static updateProductPrice() {
@@ -86,6 +91,11 @@ class Main {
         item.userOperations2 = findItem.userOperations2;
       }
     });
+
+    //更新系统记录
+    SystemRecord.getSystemRecord().updateDateOfProductPrice =
+      Utility.generateStringOfToday();
+    SystemRecord.updateSystemRecord();
   }
 
   static updateInventory() {
@@ -206,6 +216,11 @@ class Main {
     //清空组合商品和商品库存
     ComboProduct.clear();
     Inventory.clear();
+
+    //更新系统记录
+    SystemRecord.getSystemRecord().updateDateOfInventory =
+      Utility.generateStringOfToday();
+    SystemRecord.updateSystemRecord();
   }
 
   static updateProductSales() {
@@ -216,24 +231,12 @@ class Main {
       throw err;
     }
 
-    let today = new Date();
-    let startDate = new Date();
-    let endDate = new Date();
-    startDate.setDate(today.getDate() - 7);
-    endDate.setDate(today.getDate() - 1);
-
-    let startDateYear = startDate.getFullYear();
-    let startDateMonth = String(startDate.getMonth() + 1).padStart(2, "0");
-    let startDateDay = String(startDate.getDate()).padStart(2, "0");
-    let endDateYear = endDate.getFullYear();
-    let endDateMonth = String(endDate.getMonth() + 1).padStart(2, "0");
-    let endDateDay = String(endDate.getDate()).padStart(2, "0");
-
-    let dateOfLast7Days = `${startDateYear}-${startDateMonth}-${startDateDay}~${endDateYear}-${endDateMonth}-${endDateDay}`;
+    let dateOfLast7Days = Utility.generateStringOfLast7Days();
 
     let updateDateOfLast7Days =
       SystemRecord.getSystemRecord().updateDateOfLast7Days;
-    let needUpdateSystemRecord = false;
+    let needUpdateSystemRecordOfLast7Days = false;
+    let needUpdateSystemRecordOfProductSales = false;
 
     let allVipshopGoods = VipshopGoods.filterVipshopGoods();
 
@@ -257,7 +260,8 @@ class Main {
 
       if (findItem) {
         //需要更新7天数据更新日期
-        needUpdateSystemRecord = true;
+        needUpdateSystemRecordOfLast7Days = true;
+        SystemRecord.getSystemRecord().updateDateOfLast7Days = dateOfLast7Days;
 
         item.exposureUVOfLast7Days = +findItem.exposureUV;
         item.productDetailsUVOfLast7Days = +findItem.productDetailsUV;
@@ -306,14 +310,21 @@ class Main {
           item.firstListingTime = findItem.firstListingTime
             ? "'" + findItem.firstListingTime
             : "";
+          //需要更新销量总计
+          item.totalSales = "expired";
+          //需要更新商品销售系统记录
+          if ("'" + findItem.salesDate == Utility.generateStringOfYesterday()) {
+            needUpdateSystemRecordOfProductSales = true;
+            SystemRecord.getSystemRecord().updateDateOfProductSales =
+              Utility.generateStringOfYesterday();
+          }
         }
       }
     });
 
-    //需要更新近7天款销量
-    if (needUpdateSystemRecord) {
-      let styleSalesOfLast7DaysMap = new Map();
-
+    //根据需要计算近7天款销量
+    let styleSalesOfLast7DaysMap = new Map();
+    if (needUpdateSystemRecordOfLast7Days) {
       allVipshopGoods.forEach((item) => {
         let styleSalesOfLast7Days = styleSalesOfLast7DaysMap.get(
           item.styleNumber,
@@ -331,14 +342,29 @@ class Main {
           );
         }
       });
-
-      //更新近7天款销量字段
-      allVipshopGoods.forEach((item) => {
+    }
+    //更新近7天款销量和销量合计
+    allVipshopGoods.forEach((item) => {
+      if (needUpdateSystemRecordOfLast7Days) {
         item.styleSalesOfLast7Days =
           styleSalesOfLast7DaysMap.get(item.styleNumber) ?? 0;
-      });
+      }
+      if (item.totalSales == "expired") {
+        item.totalSales = 0;
+        for (let prop of Object.keys(
+          Utility.generateDateKeyToTitleForTotalSales(),
+        )) {
+          if (item[prop]) {
+            item.totalSales += +item[prop];
+          }
+        }
+      }
+    });
 
-      SystemRecord.getSystemRecord().updateDateOfLast7Days = dateOfLast7Days;
+    if (
+      needUpdateSystemRecordOfLast7Days ||
+      needUpdateSystemRecordOfProductSales
+    ) {
       SystemRecord.updateSystemRecord();
     }
     //清空商品销售表
@@ -346,30 +372,74 @@ class Main {
   }
 
   static outputReport() {
+    //检查数据更新情况
+    let systemRecord = SystemRecord.getSystemRecord();
+    if (
+      systemRecord.updateDateOfLast7Days != Utility.generateStringOfLast7Days()
+    ) {
+      if (
+        MsgBox(
+          "【近7天商品销售数据】尚未更新,是否继续生成报表?",
+          jsYesNo,
+          "提醒",
+        ) === jsResultNo
+      )
+        throw new Error("请更新【近7天商品销售数据】后再重试!");
+    }
+
+    if (
+      systemRecord.updateDateOfProductPrice != Utility.generateStringOfToday()
+    ) {
+      if (
+        MsgBox(
+          "【商品价格】今日尚未更新,是否继续生成报表?",
+          jsYesNo,
+          "提醒",
+        ) === jsResultNo
+      )
+        throw new Error("请更新【商品价格】后再重试!");
+    }
+
+    if (
+      systemRecord.updateDateOfRegularProduct != Utility.generateStringOfToday()
+    ) {
+      if (
+        MsgBox(
+          "【常态商品】今日尚未更新,是否继续生成报表?",
+          jsYesNo,
+          "提醒",
+        ) === jsResultNo
+      )
+        throw new Error("请更新【常态商品】后再重试!");
+    }
+
+    if (systemRecord.updateDateOfInventory != Utility.generateStringOfToday()) {
+      if (
+        MsgBox(
+          "【商品库存】今日尚未更新,是否继续生成报表?",
+          jsYesNo,
+          "提醒",
+        ) === jsResultNo
+      )
+        throw new Error("请更新【商品库存】后再重试!");
+    }
+
+    if (
+      systemRecord.updateDateOfProductSales !=
+      Utility.generateStringOfYesterday()
+    ) {
+      if (
+        MsgBox(
+          "【商品销售】昨日数据尚未更新,是否继续生成报表?",
+          jsYesNo,
+          "提醒",
+        ) === jsResultNo
+      )
+        throw new Error("请更新【商品销售】昨日数据后再重试!");
+    }
+
     //构造筛选选项
-    let selectOption = {
-      mainSalesSeason: undefined,
-      applicableGender: undefined,
-      itemStatus: undefined,
-      offlineReason: undefined,
-      salesAge: undefined,
-      marketingPositioning: undefined,
-      activityStatus: undefined,
-      userOperations1: undefined,
-      userOperations2: undefined,
-      profit: undefined,
-      profitRate: undefined,
-      isPriceBroken: undefined,
-      stockingMode: undefined,
-      sellableInventory: undefined,
-      isOutOfStock: undefined,
-      sellableDays: undefined,
-      finishedGoodsTotalInventory: undefined,
-      generalGoodsTotalInventory: undefined,
-      totalInventory: undefined,
-      salesQuantityOfLast7Days: undefined,
-      topProductsBySales: undefined,
-    };
+    let selectOption = {};
     if (UserForm1.CheckBox2.Value) {
       selectOption.mainSalesSeason = ["春秋"];
     }
@@ -930,11 +1000,13 @@ class VipshopGoods {
     //货号去重
     let duplicates = Utility.findDuplicatesByProperty(this._data, "itemNumber");
     if (duplicates.length != 0) {
-      throw new Error(
+      throw new CustomError(
         this._wsName +
           "中存在重复的货号：【" +
           duplicates +
           "】，请核查后重试！",
+        { itemNumber: "货号", errReason: "错误原因" },
+        duplicates,
       );
     }
   }
@@ -1878,11 +1950,13 @@ class ProductPrice {
     //货号去重
     let duplicates = Utility.findDuplicatesByProperty(this._data, "itemNumber");
     if (duplicates.length != 0) {
-      throw new Error(
+      throw new CustomError(
         this._wsName +
           "中存在重复的货号：【" +
           duplicates +
           "】，请核查后重试！",
+        { itemNumber: "货号", errReason: "错误原因" },
+        duplicates,
       );
     }
   }
@@ -1914,6 +1988,32 @@ class ProductPrice {
     userOperations2 = 0,
     returnRate = 0.3,
   ) {
+    // 参数验证
+    if (
+      costPrice === null ||
+      costPrice === undefined ||
+      costPrice === "" ||
+      salesPrice === null ||
+      salesPrice === undefined ||
+      salesPrice === ""
+    ) {
+      return undefined;
+    }
+
+    // 转换为数字（支持字符串形式的数字）
+    const numCostPrice = Number(costPrice);
+    const numSalesPrice = Number(salesPrice);
+
+    // 验证是否为有效数字且大于0
+    if (
+      isNaN(numCostPrice) ||
+      numCostPrice <= 0 ||
+      isNaN(numSalesPrice) ||
+      numSalesPrice <= 0
+    ) {
+      return undefined;
+    }
+
     let priceInfo = this._priceConfig.find((item) => item.brandSN === brandSN);
     if (!priceInfo) {
       throw new Error("没有找到品牌SN【" + brandSN + "】的价格信息，请核实！");
@@ -1967,7 +2067,11 @@ class ProductPrice {
       userOperations2,
       returnRate,
     );
-    return Number((profit / costPrice).toFixed(5));
+    if (profit) {
+      return Number((profit / costPrice).toFixed(5));
+    } else {
+      return undefined;
+    }
   }
 
   //查询品牌超V折扣率
@@ -2235,7 +2339,10 @@ class SystemRecord {
   static _wsName = "系统记录";
   static _keyToTitle = {
     updateDateOfLast7Days: "近7天数据更新日期",
-    reservedField: "预留字段",
+    updateDateOfProductPrice: "商品价格更新日期",
+    updateDateOfRegularProduct: "常态商品更新日期",
+    updateDateOfInventory: "商品库存更新日期",
+    updateDateOfProductSales: "商品销售更新日期",
   };
 
   static _data = [];
@@ -2259,6 +2366,18 @@ class SystemRecord {
   //更新记录
   static updateSystemRecord() {
     DAO.updateWorksheet(this._wsName, this._data, this._keyToTitle);
+  }
+}
+
+//自定义错误
+class CustomError extends Error {
+  constructor(message, keyToTitle, data) {
+    super(message);
+    this.name = "CustomError";
+    this.keyToTitle = keyToTitle;
+    this.data = data;
+    // 保持正确的调用栈
+    Error.captureStackTrace(this, CustomError);
   }
 }
 
@@ -2332,14 +2451,14 @@ class DAO {
       .Range("A1")
       .Resize(showData.length, showData[0].length).Value2 = showData;
     if (workbook == Workbooks(this._wbName)) {
-      Workbooks(this._wbName).Save();
+      workbook.Save();
     }
   }
 
   static clearWorksheet(wsName, workbook = Workbooks(this._wbName)) {
     workbook.Sheets(wsName).Cells.ClearContents();
     if (workbook == Workbooks(this._wbName)) {
-      Workbooks(this._wbName).Save();
+      workbook.Save();
     }
   }
 }
@@ -2370,11 +2489,77 @@ class Utility {
       date.setDate(today.getDate() - i);
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, 0);
+      const day = String(date.getDate()).padStart(2, "0");
       result[`+${year}-${month}-${day}`] = `'${month}/${day}`;
     }
 
     return result;
+  }
+
+  //生成近7天日期段字符串
+  static generateStringOfLast7Days() {
+    let today = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+    startDate.setDate(today.getDate() - 7);
+    endDate.setDate(today.getDate() - 1);
+
+    let startDateYear = startDate.getFullYear();
+    let startDateMonth = String(startDate.getMonth() + 1).padStart(2, "0");
+    let startDateDay = String(startDate.getDate()).padStart(2, "0");
+    let endDateYear = endDate.getFullYear();
+    let endDateMonth = String(endDate.getMonth() + 1).padStart(2, "0");
+    let endDateDay = String(endDate.getDate()).padStart(2, "0");
+
+    return `${startDateYear}-${startDateMonth}-${startDateDay}~${endDateYear}-${endDateMonth}-${endDateDay}`;
+  }
+
+  //生成销量合计日期标题
+  static generateDateKeyToTitleForTotalSales() {
+    let result = {};
+
+    let today = new Date();
+    let thisYear = today.getFullYear();
+    let thisMonth = today.getMonth();
+
+    result["+" + (thisYear - 2)] = `'${thisYear - 2}`;
+    result["+" + (thisYear - 1)] = `'${thisYear - 1}`;
+
+    for (let i = 1; i <= thisMonth; i++) {
+      result["+" + thisYear + i.toString().padStart(2, "0")] =
+        `'${thisYear}` + i.toString().padStart(2, "0");
+    }
+    for (let i = today.getDate() - 1; i > 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      result[`+${year}-${month}-${day}`] = `'${month}/${day}`;
+    }
+
+    return result;
+  }
+
+  //生成今天日期的字符串格式
+  static generateStringOfToday() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `'${year}-${month}-${day}`;
+  }
+
+  //生成昨天日期的字符串格式
+  static generateStringOfYesterday() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+    const day = String(yesterday.getDate()).padStart(2, "0");
+
+    return `'${year}-${month}-${day}`;
   }
 
   //检查单字段重复项目
@@ -2385,6 +2570,7 @@ class Utility {
     data.forEach((item) => {
       let value = item[prop];
       if (seen.has(value) && value) {
+        item.errReason = "重复";
         duplicates.push(item);
       } else {
         seen.add(value);
