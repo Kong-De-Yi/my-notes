@@ -1993,12 +1993,21 @@ class ProductPrice {
   ) {
     // 参数验证
     if (
+      brandSN === null ||
+      brandSN === undefined ||
+      brandSN === "" ||
       costPrice === null ||
       costPrice === undefined ||
       costPrice === "" ||
       salesPrice === null ||
       salesPrice === undefined ||
-      salesPrice === ""
+      salesPrice === "" ||
+      userOperations1 === null ||
+      userOperations1 === "" ||
+      userOperations2 === null ||
+      userOperations2 === "" ||
+      returnRate === null ||
+      returnRate === ""
     ) {
       return undefined;
     }
@@ -2006,16 +2015,28 @@ class ProductPrice {
     // 转换为数字（支持字符串形式的数字）
     const numCostPrice = Number(costPrice);
     const numSalesPrice = Number(salesPrice);
+    const numUserOperations1 = Number(userOperations1);
+    const numUserOperations2 = Number(userOperations2);
+    const numReturnRate = Number(returnRate);
 
-    // 验证是否为有效数字且大于0
+    // 验证是否为有效数字
     if (
       isNaN(numCostPrice) ||
       numCostPrice <= 0 ||
       isNaN(numSalesPrice) ||
-      numSalesPrice <= 0
+      numSalesPrice <= 0 ||
+      isNaN(numUserOperations1) ||
+      numUserOperations1 < 0 ||
+      isNaN(numUserOperations2) ||
+      numUserOperations2 < 0 ||
+      isNaN(numReturnRate) ||
+      numReturnRate <= 0
     ) {
       return undefined;
     }
+
+    //退货率不能为100%
+    if (numReturnRate == 1) returnRate = 0.3;
 
     let priceInfo = this._priceConfig.find((item) => item.brandSN === brandSN);
     if (!priceInfo) {
