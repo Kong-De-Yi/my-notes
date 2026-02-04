@@ -894,6 +894,9 @@ class Main {
       if (UserForm1.CheckBox38.Value) {
         newSt.Columns("A:E").EntireColumn.Hidden = true;
         newSt.Columns("J:L").EntireColumn.Hidden = true;
+        newSt.Columns("S:S").EntireColumn.Hidden = true;
+        newSt.Columns("Z:AC").EntireColumn.Hidden = true;
+        newSt.Columns("AE:AF").EntireColumn.Hidden = true;
         newSt.Columns("BA:BG").EntireColumn.Hidden = true;
         newSt.Columns("BI:BO").EntireColumn.Hidden = true;
         newSt.Columns("BQ:CE").EntireColumn.Hidden = true;
