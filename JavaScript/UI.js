@@ -1,5 +1,14 @@
 // 显示窗口
 function Macro() {
+  UserForm1.ComboBox3.AddItem([
+    "直通车",
+    "黄金等级",
+    "TOP3",
+    "白金等级",
+    "白金限量",
+  ]);
+  UserForm1.ComboBox5.AddItem(["中台1", "中台2"]);
+
   UserForm1.ComboBox4.AddItem([
     "上市年份",
     "四级品类",

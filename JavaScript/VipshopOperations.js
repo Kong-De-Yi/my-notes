@@ -279,27 +279,25 @@ class Main {
           : "";
       }
 
-      item.unitPriceOfLast7Days =
-        item.salesQuantityOfLast7Days == 0
-          ? ""
-          : item.salesAmountOfLast7Days / item.salesQuantityOfLast7Days;
-      item.clickThroughRateOfLast7Days =
-        item.exposureUVOfLast7Days == 0
-          ? ""
-          : item.productDetailsUVOfLast7Days / item.exposureUVOfLast7Days;
-      item.addToCartRateOfLast7Days =
-        item.productDetailsUVOfLast7Days == 0
-          ? ""
-          : item.addToCartUVOfLast7Days / item.productDetailsUVOfLast7Days;
-      item.purchaseRateOfLast7Days =
-        item.productDetailsUVOfLast7Days == 0
-          ? ""
-          : item.customerCountOfLast7Days / item.productDetailsUVOfLast7Days;
-      item.rejectAndReturnRateOfLast7Days =
-        item.salesQuantityOfLast7Days == 0
-          ? ""
-          : item.rejectAndReturnCountOfLast7Days /
-            item.salesQuantityOfLast7Days;
+      item.unitPriceOfLast7Days = !item.salesQuantityOfLast7Days
+        ? ""
+        : item.salesAmountOfLast7Days / item.salesQuantityOfLast7Days;
+
+      item.clickThroughRateOfLast7Days = !item.exposureUVOfLast7Days
+        ? ""
+        : item.productDetailsUVOfLast7Days / item.exposureUVOfLast7Days;
+
+      item.addToCartRateOfLast7Days = !item.productDetailsUVOfLast7Days
+        ? ""
+        : item.addToCartUVOfLast7Days / item.productDetailsUVOfLast7Days;
+
+      item.purchaseRateOfLast7Days = !item.productDetailsUVOfLast7Days
+        ? ""
+        : item.customerCountOfLast7Days / item.productDetailsUVOfLast7Days;
+
+      item.rejectAndReturnRateOfLast7Days = !item.salesQuantityOfLast7Days
+        ? ""
+        : item.rejectAndReturnCountOfLast7Days / item.salesQuantityOfLast7Days;
 
       //更新年，月，日销量
       for (let prop of Object.keys(VipshopGoods.getOptionalKeyToTitle())) {
@@ -441,323 +439,8 @@ class Main {
         throw new Error("请更新【商品销售】昨日数据后再重试!");
     }
 
-    //构造筛选选项
-    let selectOption = {};
-    if (UserForm1.CheckBox2.Value) {
-      selectOption.mainSalesSeason = ["春秋"];
-    }
-    if (UserForm1.CheckBox3.Value) {
-      selectOption.mainSalesSeason
-        ? selectOption.mainSalesSeason.push("夏")
-        : (selectOption.mainSalesSeason = ["夏"]);
-    }
-    if (UserForm1.CheckBox4.Value) {
-      selectOption.mainSalesSeason
-        ? selectOption.mainSalesSeason.push("冬")
-        : (selectOption.mainSalesSeason = ["冬"]);
-    }
-    if (UserForm1.CheckBox5.Value) {
-      selectOption.mainSalesSeason
-        ? selectOption.mainSalesSeason.push("四季")
-        : (selectOption.mainSalesSeason = ["四季"]);
-    }
-
-    if (UserForm1.CheckBox14.Value) {
-      selectOption.applicableGender = ["男童"];
-    }
-    if (UserForm1.CheckBox15.Value) {
-      selectOption.applicableGender
-        ? selectOption.applicableGender.push("女童")
-        : (selectOption.applicableGender = ["女童"]);
-    }
-    if (UserForm1.CheckBox16.Value) {
-      selectOption.applicableGender
-        ? selectOption.applicableGender.push("中性")
-        : (selectOption.applicableGender = ["中性"]);
-    }
-
-    if (UserForm1.CheckBox17.Value) {
-      selectOption.itemStatus = ["商品上线"];
-    }
-    if (UserForm1.CheckBox18.Value) {
-      selectOption.itemStatus
-        ? selectOption.itemStatus.push("部分上线")
-        : (selectOption.itemStatus = ["部分上线"]);
-    }
-    if (UserForm1.CheckBox19.Value) {
-      selectOption.itemStatus
-        ? selectOption.itemStatus.push("商品下线")
-        : (selectOption.itemStatus = ["商品下线"]);
-    }
-
-    if (UserForm1.CheckBox27.Value) {
-      selectOption.offlineReason = ["主动下线"];
-    }
-    if (UserForm1.CheckBox28.Value) {
-      selectOption.offlineReason
-        ? selectOption.offlineReason.push("平台下线")
-        : (selectOption.offlineReason = ["平台下线"]);
-    }
-    if (UserForm1.CheckBox29.Value) {
-      selectOption.offlineReason
-        ? selectOption.offlineReason.push("不明原因")
-        : (selectOption.offlineReason = ["不明原因"]);
-    }
-
-    if (UserForm1.TextEdit1.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit1.Value)) {
-        throw new Error("售龄输入必须是一个有效的数字");
-      }
-      selectOption.salesAge = [Number(UserForm1.TextEdit1.Value), undefined];
-    }
-    if (UserForm1.TextEdit11.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit11.Value)) {
-        throw new Error("售龄输入必须是一个有效的数字");
-      }
-      if (selectOption.salesAge) {
-        selectOption.salesAge[1] = Number(UserForm1.TextEdit11.Value);
-      } else {
-        selectOption.salesAge = [undefined, Number(UserForm1.TextEdit11.Value)];
-      }
-    }
-
-    if (UserForm1.CheckBox20.Value) {
-      selectOption.marketingPositioning = ["引流款"];
-    }
-    if (UserForm1.CheckBox21.Value) {
-      selectOption.marketingPositioning
-        ? selectOption.marketingPositioning.push("利润款")
-        : (selectOption.marketingPositioning = ["利润款"]);
-    }
-    if (UserForm1.CheckBox22.Value) {
-      selectOption.marketingPositioning
-        ? selectOption.marketingPositioning.push("清仓款")
-        : (selectOption.marketingPositioning = ["清仓款"]);
-    }
-
-    if (UserForm1.OptionButton23.Value) {
-      selectOption.activityStatus = "活动中";
-    }
-    if (UserForm1.OptionButton24.Value) {
-      selectOption.activityStatus = "未提报";
-    }
-
-    if (UserForm1.CheckBox8.Value) {
-      selectOption.userOperations1 = true;
-    }
-    if (UserForm1.CheckBox9.Value) {
-      selectOption.userOperations2 = true;
-    }
-
-    if (UserForm1.TextEdit3.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit3.Value)) {
-        throw new Error("利润输入必须是一个有效的数字");
-      }
-      selectOption.profit = [Number(UserForm1.TextEdit3.Value), undefined];
-    }
-    if (UserForm1.TextEdit4.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit4.Value)) {
-        throw new Error("利润输入必须是一个有效的数字");
-      }
-      if (selectOption.profit) {
-        selectOption.profit[1] = Number(UserForm1.TextEdit4.Value);
-      } else {
-        selectOption.profit = [undefined, Number(UserForm1.TextEdit4.Value)];
-      }
-    }
-
-    if (UserForm1.TextEdit5.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit5.Value)) {
-        throw new Error("利润率输入必须是一个有效的数字");
-      }
-      selectOption.profitRate = [Number(UserForm1.TextEdit5.Value), undefined];
-    }
-    if (UserForm1.TextEdit6.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit6.Value)) {
-        throw new Error("利润率输入必须是一个有效的数字");
-      }
-      if (selectOption.profitRate) {
-        selectOption.profitRate[1] = Number(UserForm1.TextEdit6.Value);
-      } else {
-        selectOption.profitRate = [
-          undefined,
-          Number(UserForm1.TextEdit6.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.CheckBox10.Value) {
-      selectOption.isPriceBroken = true;
-    }
-
-    if (UserForm1.CheckBox23.Value) {
-      selectOption.stockingMode = ["现货"];
-    }
-    if (UserForm1.CheckBox24.Value) {
-      selectOption.stockingMode
-        ? selectOption.stockingMode.push("通版通货")
-        : (selectOption.stockingMode = ["通版通货"]);
-    }
-    if (UserForm1.CheckBox25.Value) {
-      selectOption.stockingMode
-        ? selectOption.stockingMode.push("专版通货")
-        : (selectOption.stockingMode = ["专版通货"]);
-    }
-
-    if (UserForm1.TextEdit7.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit7.Value)) {
-        throw new Error("可售库存输入必须是一个有效的数字");
-      }
-      selectOption.sellableInventory = [
-        Number(UserForm1.TextEdit7.Value),
-        undefined,
-      ];
-    }
-    if (UserForm1.TextEdit8.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit8.Value)) {
-        throw new Error("可售库存输入必须是一个有效的数字");
-      }
-      if (selectOption.sellableInventory) {
-        selectOption.sellableInventory[1] = Number(UserForm1.TextEdit8.Value);
-      } else {
-        selectOption.sellableInventory = [
-          undefined,
-          Number(UserForm1.TextEdit8.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.CheckBox12.Value) {
-      selectOption.isOutOfStock = true;
-    }
-
-    if (UserForm1.TextEdit9.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit9.Value)) {
-        throw new Error("可售天数输入必须是一个有效的数字");
-      }
-      selectOption.sellableDays = [
-        Number(UserForm1.TextEdit9.Value),
-        undefined,
-      ];
-    }
-    if (UserForm1.TextEdit10.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit10.Value)) {
-        throw new Error("可售天数输入必须是一个有效的数字");
-      }
-      if (selectOption.sellableDays) {
-        selectOption.sellableDays[1] = Number(UserForm1.TextEdit10.Value);
-      } else {
-        selectOption.sellableDays = [
-          undefined,
-          Number(UserForm1.TextEdit10.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.TextEdit17.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit17.Value)) {
-        throw new Error("成品库存输入必须是一个有效的数字");
-      }
-      selectOption.finishedGoodsTotalInventory = [
-        Number(UserForm1.TextEdit17.Value),
-        undefined,
-      ];
-    }
-    if (UserForm1.TextEdit18.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit18.Value)) {
-        throw new Error("成品库存输入必须是一个有效的数字");
-      }
-      if (selectOption.finishedGoodsTotalInventory) {
-        selectOption.finishedGoodsTotalInventory[1] = Number(
-          UserForm1.TextEdit18.Value,
-        );
-      } else {
-        selectOption.finishedGoodsTotalInventory = [
-          undefined,
-          Number(UserForm1.TextEdit18.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.TextEdit19.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit19.Value)) {
-        throw new Error("通货库存输入必须是一个有效的数字");
-      }
-      selectOption.generalGoodsTotalInventory = [
-        Number(UserForm1.TextEdit19.Value),
-        undefined,
-      ];
-    }
-    if (UserForm1.TextEdit20.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit20.Value)) {
-        throw new Error("通货库存输入必须是一个有效的数字");
-      }
-      if (selectOption.generalGoodsTotalInventory) {
-        selectOption.generalGoodsTotalInventory[1] = Number(
-          UserForm1.TextEdit20.Value,
-        );
-      } else {
-        selectOption.generalGoodsTotalInventory = [
-          undefined,
-          Number(UserForm1.TextEdit20.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.TextEdit21.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit21.Value)) {
-        throw new Error("合计库存输入必须是一个有效的数字");
-      }
-      selectOption.totalInventory = [
-        Number(UserForm1.TextEdit21.Value),
-        undefined,
-      ];
-    }
-    if (UserForm1.TextEdit22.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit22.Value)) {
-        throw new Error("合计库存输入必须是一个有效的数字");
-      }
-      if (selectOption.totalInventory) {
-        selectOption.totalInventory[1] = Number(UserForm1.TextEdit22.Value);
-      } else {
-        selectOption.totalInventory = [
-          undefined,
-          Number(UserForm1.TextEdit22.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.TextEdit14.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit14.Value)) {
-        throw new Error("近7天销量输入必须是一个有效的数字");
-      }
-      selectOption.salesQuantityOfLast7Days = [
-        Number(UserForm1.TextEdit14.Value),
-        undefined,
-      ];
-    }
-    if (UserForm1.TextEdit15.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit15.Value)) {
-        throw new Error("近7天销量输入必须是一个有效的数字");
-      }
-      if (selectOption.salesQuantityOfLast7Days) {
-        selectOption.salesQuantityOfLast7Days[1] = Number(
-          UserForm1.TextEdit15.Value,
-        );
-      } else {
-        selectOption.salesQuantityOfLast7Days = [
-          undefined,
-          Number(UserForm1.TextEdit15.Value),
-        ];
-      }
-    }
-
-    if (UserForm1.TextEdit16.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit16.Value)) {
-        throw new Error("近7天销量排名输入必须是一个有效的数字");
-      }
-      selectOption.topProductsBySales = Number(UserForm1.TextEdit16.Value);
-    }
+    //获取货品筛选选项
+    let selectOption = Utility.getSelectOption();
 
     //拆分工作表选项
     let splitByOption = new Map([
@@ -1188,29 +871,13 @@ class VipshopGoods {
 
         case "offlineReason":
           VipShopGoodsForQuerys = query[1].reduce((result, current) => {
-            let filteredVipshopGoods = VipShopGoodsForQuerys.filter((item) => {
-              if (current == "主动下线") {
-                return (
-                  item[query[0]] == "新品下架" ||
-                  item[query[0]] == "过季下架" ||
-                  item[query[0]] == "更换吊牌" ||
-                  item[query[0]] == "转移品牌" ||
-                  item[query[0]] == "清仓淘汰"
-                );
-              } else if (current == "平台下线") {
-                return (
-                  item[query[0]] == "内网撞款" ||
-                  item[query[0]] == "资质问题" ||
-                  item[query[0]] == "内在质检"
-                );
-              } else if (current == "不明原因") {
-                return !item[query[0]];
-              }
-            });
+            let filteredVipshopGoods = VipShopGoodsForQuerys.filter(
+              (item) =>
+                item[query[0]] == current && item.itemStatus == "商品下线",
+            );
             result.push(...filteredVipshopGoods);
             return result;
           }, []);
-
           break;
 
         case "userOperations1":
@@ -2671,5 +2338,357 @@ class Utility {
     });
 
     return duplicates;
+  }
+
+  //获取货号筛选选项
+  static getSelectOption() {
+    let selectOption = {};
+
+    if (UserForm1.CheckBox2.Value) {
+      selectOption.mainSalesSeason = ["春秋"];
+    }
+    if (UserForm1.CheckBox3.Value) {
+      selectOption.mainSalesSeason
+        ? selectOption.mainSalesSeason.push("夏")
+        : (selectOption.mainSalesSeason = ["夏"]);
+    }
+    if (UserForm1.CheckBox4.Value) {
+      selectOption.mainSalesSeason
+        ? selectOption.mainSalesSeason.push("冬")
+        : (selectOption.mainSalesSeason = ["冬"]);
+    }
+    if (UserForm1.CheckBox5.Value) {
+      selectOption.mainSalesSeason
+        ? selectOption.mainSalesSeason.push("四季")
+        : (selectOption.mainSalesSeason = ["四季"]);
+    }
+
+    if (UserForm1.CheckBox14.Value) {
+      selectOption.applicableGender = ["男童"];
+    }
+    if (UserForm1.CheckBox15.Value) {
+      selectOption.applicableGender
+        ? selectOption.applicableGender.push("女童")
+        : (selectOption.applicableGender = ["女童"]);
+    }
+    if (UserForm1.CheckBox16.Value) {
+      selectOption.applicableGender
+        ? selectOption.applicableGender.push("中性")
+        : (selectOption.applicableGender = ["中性"]);
+    }
+
+    if (UserForm1.CheckBox17.Value) {
+      selectOption.itemStatus = ["商品上线"];
+    }
+    if (UserForm1.CheckBox18.Value) {
+      selectOption.itemStatus
+        ? selectOption.itemStatus.push("部分上线")
+        : (selectOption.itemStatus = ["部分上线"]);
+    }
+    if (UserForm1.CheckBox19.Value) {
+      selectOption.itemStatus
+        ? selectOption.itemStatus.push("商品下线")
+        : (selectOption.itemStatus = ["商品下线"]);
+    }
+
+    if (UserForm1.CheckBox27.Value) {
+      selectOption.offlineReason = ["新品下架"];
+    }
+    if (UserForm1.CheckBox28.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("过季下架")
+        : (selectOption.offlineReason = ["过季下架"]);
+    }
+    if (UserForm1.CheckBox29.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("更换吊牌")
+        : (selectOption.offlineReason = ["更换吊牌"]);
+    }
+    if (UserForm1.CheckBox35.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("转移品牌")
+        : (selectOption.offlineReason = ["转移品牌"]);
+    }
+    if (UserForm1.CheckBox36.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("清仓淘汰")
+        : (selectOption.offlineReason = ["清仓淘汰"]);
+    }
+    if (UserForm1.CheckBox37.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("内网撞款")
+        : (selectOption.offlineReason = ["内网撞款"]);
+    }
+    if (UserForm1.CheckBox39.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("资质问题")
+        : (selectOption.offlineReason = ["资质问题"]);
+    }
+    if (UserForm1.CheckBox40.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push("内在质检")
+        : (selectOption.offlineReason = ["内在质检"]);
+    }
+    if (UserForm1.CheckBox41.Value) {
+      selectOption.offlineReason
+        ? selectOption.offlineReason.push(undefined)
+        : (selectOption.offlineReason = [undefined]);
+    }
+
+    if (UserForm1.TextEdit1.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit1.Value)) {
+        throw new Error("售龄输入必须是一个有效的数字");
+      }
+      selectOption.salesAge = [Number(UserForm1.TextEdit1.Value), undefined];
+    }
+    if (UserForm1.TextEdit11.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit11.Value)) {
+        throw new Error("售龄输入必须是一个有效的数字");
+      }
+      if (selectOption.salesAge) {
+        selectOption.salesAge[1] = Number(UserForm1.TextEdit11.Value);
+      } else {
+        selectOption.salesAge = [undefined, Number(UserForm1.TextEdit11.Value)];
+      }
+    }
+
+    if (UserForm1.CheckBox20.Value) {
+      selectOption.marketingPositioning = ["引流款"];
+    }
+    if (UserForm1.CheckBox21.Value) {
+      selectOption.marketingPositioning
+        ? selectOption.marketingPositioning.push("利润款")
+        : (selectOption.marketingPositioning = ["利润款"]);
+    }
+    if (UserForm1.CheckBox22.Value) {
+      selectOption.marketingPositioning
+        ? selectOption.marketingPositioning.push("清仓款")
+        : (selectOption.marketingPositioning = ["清仓款"]);
+    }
+
+    if (UserForm1.OptionButton23.Value) {
+      selectOption.activityStatus = "活动中";
+    }
+    if (UserForm1.OptionButton24.Value) {
+      selectOption.activityStatus = "未提报";
+    }
+
+    if (UserForm1.CheckBox8.Value) {
+      selectOption.userOperations1 = true;
+    }
+    if (UserForm1.CheckBox9.Value) {
+      selectOption.userOperations2 = true;
+    }
+
+    if (UserForm1.TextEdit3.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit3.Value)) {
+        throw new Error("利润输入必须是一个有效的数字");
+      }
+      selectOption.profit = [Number(UserForm1.TextEdit3.Value), undefined];
+    }
+    if (UserForm1.TextEdit4.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit4.Value)) {
+        throw new Error("利润输入必须是一个有效的数字");
+      }
+      if (selectOption.profit) {
+        selectOption.profit[1] = Number(UserForm1.TextEdit4.Value);
+      } else {
+        selectOption.profit = [undefined, Number(UserForm1.TextEdit4.Value)];
+      }
+    }
+
+    if (UserForm1.TextEdit5.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit5.Value)) {
+        throw new Error("利润率输入必须是一个有效的数字");
+      }
+      selectOption.profitRate = [Number(UserForm1.TextEdit5.Value), undefined];
+    }
+    if (UserForm1.TextEdit6.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit6.Value)) {
+        throw new Error("利润率输入必须是一个有效的数字");
+      }
+      if (selectOption.profitRate) {
+        selectOption.profitRate[1] = Number(UserForm1.TextEdit6.Value);
+      } else {
+        selectOption.profitRate = [
+          undefined,
+          Number(UserForm1.TextEdit6.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.CheckBox10.Value) {
+      selectOption.isPriceBroken = true;
+    }
+
+    if (UserForm1.CheckBox23.Value) {
+      selectOption.stockingMode = ["现货"];
+    }
+    if (UserForm1.CheckBox24.Value) {
+      selectOption.stockingMode
+        ? selectOption.stockingMode.push("通版通货")
+        : (selectOption.stockingMode = ["通版通货"]);
+    }
+    if (UserForm1.CheckBox25.Value) {
+      selectOption.stockingMode
+        ? selectOption.stockingMode.push("专版通货")
+        : (selectOption.stockingMode = ["专版通货"]);
+    }
+
+    if (UserForm1.TextEdit7.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit7.Value)) {
+        throw new Error("可售库存输入必须是一个有效的数字");
+      }
+      selectOption.sellableInventory = [
+        Number(UserForm1.TextEdit7.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit8.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit8.Value)) {
+        throw new Error("可售库存输入必须是一个有效的数字");
+      }
+      if (selectOption.sellableInventory) {
+        selectOption.sellableInventory[1] = Number(UserForm1.TextEdit8.Value);
+      } else {
+        selectOption.sellableInventory = [
+          undefined,
+          Number(UserForm1.TextEdit8.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.CheckBox12.Value) {
+      selectOption.isOutOfStock = true;
+    }
+
+    if (UserForm1.TextEdit9.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit9.Value)) {
+        throw new Error("可售天数输入必须是一个有效的数字");
+      }
+      selectOption.sellableDays = [
+        Number(UserForm1.TextEdit9.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit10.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit10.Value)) {
+        throw new Error("可售天数输入必须是一个有效的数字");
+      }
+      if (selectOption.sellableDays) {
+        selectOption.sellableDays[1] = Number(UserForm1.TextEdit10.Value);
+      } else {
+        selectOption.sellableDays = [
+          undefined,
+          Number(UserForm1.TextEdit10.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.TextEdit17.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit17.Value)) {
+        throw new Error("成品库存输入必须是一个有效的数字");
+      }
+      selectOption.finishedGoodsTotalInventory = [
+        Number(UserForm1.TextEdit17.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit18.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit18.Value)) {
+        throw new Error("成品库存输入必须是一个有效的数字");
+      }
+      if (selectOption.finishedGoodsTotalInventory) {
+        selectOption.finishedGoodsTotalInventory[1] = Number(
+          UserForm1.TextEdit18.Value,
+        );
+      } else {
+        selectOption.finishedGoodsTotalInventory = [
+          undefined,
+          Number(UserForm1.TextEdit18.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.TextEdit19.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit19.Value)) {
+        throw new Error("通货库存输入必须是一个有效的数字");
+      }
+      selectOption.generalGoodsTotalInventory = [
+        Number(UserForm1.TextEdit19.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit20.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit20.Value)) {
+        throw new Error("通货库存输入必须是一个有效的数字");
+      }
+      if (selectOption.generalGoodsTotalInventory) {
+        selectOption.generalGoodsTotalInventory[1] = Number(
+          UserForm1.TextEdit20.Value,
+        );
+      } else {
+        selectOption.generalGoodsTotalInventory = [
+          undefined,
+          Number(UserForm1.TextEdit20.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.TextEdit21.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit21.Value)) {
+        throw new Error("合计库存输入必须是一个有效的数字");
+      }
+      selectOption.totalInventory = [
+        Number(UserForm1.TextEdit21.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit22.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit22.Value)) {
+        throw new Error("合计库存输入必须是一个有效的数字");
+      }
+      if (selectOption.totalInventory) {
+        selectOption.totalInventory[1] = Number(UserForm1.TextEdit22.Value);
+      } else {
+        selectOption.totalInventory = [
+          undefined,
+          Number(UserForm1.TextEdit22.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.TextEdit14.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit14.Value)) {
+        throw new Error("近7天销量输入必须是一个有效的数字");
+      }
+      selectOption.salesQuantityOfLast7Days = [
+        Number(UserForm1.TextEdit14.Value),
+        undefined,
+      ];
+    }
+    if (UserForm1.TextEdit15.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit15.Value)) {
+        throw new Error("近7天销量输入必须是一个有效的数字");
+      }
+      if (selectOption.salesQuantityOfLast7Days) {
+        selectOption.salesQuantityOfLast7Days[1] = Number(
+          UserForm1.TextEdit15.Value,
+        );
+      } else {
+        selectOption.salesQuantityOfLast7Days = [
+          undefined,
+          Number(UserForm1.TextEdit15.Value),
+        ];
+      }
+    }
+
+    if (UserForm1.TextEdit16.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit16.Value)) {
+        throw new Error("近7天销量排名输入必须是一个有效的数字");
+      }
+      selectOption.topProductsBySales = Number(UserForm1.TextEdit16.Value);
+    }
+    return selectOption;
   }
 }
