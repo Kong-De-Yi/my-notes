@@ -39,6 +39,7 @@ function Macro() {
 //更新常态商品
 function UserForm1_CommandButton2_Click() {
   try {
+    SystemRecord.initializeData();
     VipshopGoods.initializeData();
     Main.updateRegularProduct();
   } catch (err) {
@@ -56,6 +57,7 @@ function UserForm1_CommandButton2_Click() {
 //更新商品价格
 function UserForm1_CommandButton1_Click() {
   try {
+    SystemRecord.initializeData();
     VipshopGoods.initializeData();
     Main.updateProductPrice();
   } catch (err) {
@@ -73,6 +75,7 @@ function UserForm1_CommandButton1_Click() {
 //更新商品库存
 function UserForm1_CommandButton4_Click() {
   try {
+    SystemRecord.initializeData();
     VipshopGoods.initializeData();
     Main.updateInventory();
   } catch (err) {
@@ -90,6 +93,7 @@ function UserForm1_CommandButton4_Click() {
 //更新商品销售
 function UserForm1_CommandButton5_Click() {
   try {
+    SystemRecord.initializeData();
     VipshopGoods.initializeData();
     Main.updateProductSales();
   } catch (err) {
@@ -107,6 +111,7 @@ function UserForm1_CommandButton5_Click() {
 //一键更新
 function UserForm1_CommandButton6_Click() {
   try {
+    SystemRecord.initializeData();
     VipshopGoods.initializeData();
     Main.updateRegularProduct();
     Main.updateProductPrice();
@@ -127,6 +132,7 @@ function UserForm1_CommandButton6_Click() {
 //报表输出
 function UserForm1_CommandButton13_Click() {
   try {
+    SystemRecord.initializeData();
     VipshopGoods.initializeData();
     Main.outputReport();
   } catch (err) {

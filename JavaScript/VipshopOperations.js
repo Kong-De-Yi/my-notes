@@ -117,6 +117,7 @@ class Main {
       item.finishedGoodsPrepareInventory = 0;
       item.finishedGoodsReturnInventory = 0;
       item.finishedGoodsPurchaseInventory = 0;
+      item.finishedGoodsTotalInventory = 0;
       //通货库存清0
       item.generalGoodsMainInventory = 0;
       item.generalGoodsIncomingInventory = 0;
@@ -125,6 +126,9 @@ class Main {
       item.generalGoodsPrepareInventory = 0;
       item.generalGoodsReturnInventory = 0;
       item.generalGoodsPurchaseInventory = 0;
+      item.generalGoodsTotalInventory = 0;
+      //合计库存清0
+      item.totalInventory = 0;
 
       //找出常态商品中货号对应的条码商品
       let products = RegularProduct.filterRegularProducts({
@@ -225,7 +229,6 @@ class Main {
 
   static updateProductSales() {
     try {
-      SystemRecord.initializeData();
       ProductSales.initializeData();
     } catch (err) {
       throw err;
@@ -313,7 +316,7 @@ class Main {
           //需要更新销量总计
           item.totalSales = "expired";
           //需要更新商品销售系统记录
-          if ("'" + findItem.salesDate == Utility.generateStringOfYesterday()) {
+          if ("+" + findItem.salesDate == Utility.generateStringOfYesterday()) {
             needUpdateSystemRecordOfProductSales = true;
             SystemRecord.getSystemRecord().updateDateOfProductSales =
               Utility.generateStringOfYesterday();
@@ -890,16 +893,26 @@ class Main {
         keyToTitle,
         newWb,
       );
+
       //隐藏非必要列
       if (UserForm1.CheckBox38.Value) {
         newSt.Columns("A:E").EntireColumn.Hidden = true;
-        newSt.Columns("J:L").EntireColumn.Hidden = true;
+        newSt.Columns("I:L").EntireColumn.Hidden = true;
         newSt.Columns("S:S").EntireColumn.Hidden = true;
         newSt.Columns("Z:AC").EntireColumn.Hidden = true;
         newSt.Columns("AE:AF").EntireColumn.Hidden = true;
-        newSt.Columns("BA:BG").EntireColumn.Hidden = true;
-        newSt.Columns("BI:BO").EntireColumn.Hidden = true;
+        newSt.Columns("BA:BF").EntireColumn.Hidden = true;
+        newSt.Columns("BI:BN").EntireColumn.Hidden = true;
         newSt.Columns("BQ:CE").EntireColumn.Hidden = true;
+      }
+      //冻结窗口
+      if (UserForm1.CheckBox33.Value) {
+        newSt.Activate();
+        let win = ActiveWindow;
+        win.FreezePanes = false;
+        win.SplitRow = 1; // 冻结第1行
+        win.SplitColumn = 34; // 冻结前34列（A-AH）
+        win.FreezePanes = true;
       }
     }
   }
@@ -1178,9 +1191,10 @@ class VipshopGoods {
             let filteredVipshopGoods = VipShopGoodsForQuerys.filter((item) => {
               if (current == "主动下线") {
                 return (
-                  item[query[0]] == "非应季" ||
-                  item[query[0]] == "换吊牌" ||
-                  item[query[0]] == "转品牌" ||
+                  item[query[0]] == "新品下架" ||
+                  item[query[0]] == "过季下架" ||
+                  item[query[0]] == "更换吊牌" ||
+                  item[query[0]] == "转移品牌" ||
                   item[query[0]] == "清仓淘汰"
                 );
               } else if (current == "平台下线") {
@@ -1991,89 +2005,144 @@ class ProductPrice {
     userOperations2 = 0,
     returnRate = 0.3,
   ) {
-    // 参数验证
-    if (
-      brandSN === null ||
-      brandSN === undefined ||
-      brandSN === "" ||
-      costPrice === null ||
-      costPrice === undefined ||
-      costPrice === "" ||
-      salesPrice === null ||
-      salesPrice === undefined ||
-      salesPrice === "" ||
-      userOperations1 === null ||
-      userOperations1 === "" ||
-      userOperations2 === null ||
-      userOperations2 === "" ||
-      returnRate === null ||
-      returnRate === ""
-    ) {
+    try {
+      // 1. 基础参数验证
+      const requiredParams = [brandSN, costPrice, salesPrice];
+      if (
+        requiredParams.some(
+          (param) =>
+            param === null ||
+            param === undefined ||
+            param === "" ||
+            (typeof param === "string" && param.trim() === ""),
+        )
+      ) {
+        return undefined;
+      }
+
+      // 2. 转换为数字并验证
+      const params = {
+        costPrice: parseFloat(costPrice),
+        salesPrice: parseFloat(salesPrice),
+        userOperations1: parseFloat(userOperations1),
+        userOperations2: parseFloat(userOperations2),
+        returnRate: parseFloat(returnRate) || 0.3,
+      };
+
+      // 验证数值有效性
+      if (
+        isNaN(params.costPrice) ||
+        params.costPrice <= 0 ||
+        isNaN(params.salesPrice) ||
+        params.salesPrice <= 0 ||
+        isNaN(params.userOperations1) ||
+        params.userOperations1 < 0 ||
+        isNaN(params.userOperations2) ||
+        params.userOperations2 < 0 ||
+        params.returnRate < 0 ||
+        params.returnRate > 1 // 退货率应为0-1之间
+      ) {
+        return undefined;
+      }
+
+      // 修复漏洞：如果退货率为100%或者0%，重置为默认值
+      if (params.returnRate == 1 || params.returnRate == 0) {
+        params.returnRate = 0.3;
+      }
+
+      // 3. 获取价格配置
+      const priceInfo = this._priceConfig?.find(
+        (item) => item.brandSN === brandSN,
+      );
+      if (!priceInfo) {
+        throw new Error(`没有找到品牌SN【${brandSN}】的价格信息，请核实！`);
+      }
+
+      // 4. 提取配置参数
+      const {
+        packagingFee,
+        shippingCost,
+        returnProcessingFee,
+        vipDiscountRate,
+        vipDiscountBearingRatio,
+        platformCommission,
+        brandCommission,
+      } = priceInfo;
+
+      // 验证配置参数
+      const configValid = [
+        packagingFee,
+        shippingCost,
+        returnProcessingFee,
+        vipDiscountRate,
+        vipDiscountBearingRatio,
+        platformCommission,
+        brandCommission,
+      ].every((value) => !isNaN(value) && value >= 0);
+
+      if (!configValid) {
+        return undefined;
+      }
+
+      // 5. 计算超V优惠金额
+      let vipDiscountAmount;
+      if (params.salesPrice > 50) {
+        vipDiscountAmount = Math.round(params.salesPrice * vipDiscountRate);
+      } else {
+        vipDiscountAmount =
+          Math.round(params.salesPrice * vipDiscountRate * 10) / 10;
+      }
+
+      // 6. 计算优惠后价格（确保不为负数）
+      const priceAfterCoupon = Math.max(
+        0,
+        params.salesPrice - params.userOperations1 - params.userOperations2,
+      );
+
+      // 7. 分步计算利润
+
+      // a. 基础计算
+      const grossProfit = priceAfterCoupon - params.costPrice;
+
+      // b. 固定费用
+      const fixedCosts = packagingFee + shippingCost;
+
+      // c. 退货相关成本
+      const returnMultiplier = 1 / (1 - params.returnRate) - 1;
+      const returnCosts = returnMultiplier * fixedCosts;
+      const returnProcessingCost = params.returnRate * returnProcessingFee;
+
+      // d. 优惠承担成本
+      const vipDiscountCost = vipDiscountAmount * vipDiscountBearingRatio;
+
+      // e. 平台佣金
+      const platformFee = priceAfterCoupon * platformCommission;
+
+      // 计算品牌佣金
+      const brandCommissionBase =
+        priceAfterCoupon * (1 - platformCommission) - vipDiscountCost;
+      const brandFee = Math.max(0, brandCommissionBase) * brandCommission;
+
+      // 8. 最终利润计算
+      const profit =
+        grossProfit -
+        fixedCosts -
+        returnCosts -
+        returnProcessingCost -
+        vipDiscountCost -
+        platformFee -
+        brandFee;
+
+      // 9. 返回结果（限制小数位数）
+      return parseFloat(profit.toFixed(2));
+    } catch (error) {
+      // 根据错误类型返回不同结果
+      if (error.message.includes("没有找到品牌SN")) {
+        throw error; // 重新抛出关键业务错误
+      }
       return undefined;
     }
-
-    // 转换为数字（支持字符串形式的数字）
-    const numCostPrice = Number(costPrice);
-    const numSalesPrice = Number(salesPrice);
-    const numUserOperations1 = Number(userOperations1);
-    const numUserOperations2 = Number(userOperations2);
-    const numReturnRate = Number(returnRate);
-
-    // 验证是否为有效数字
-    if (
-      isNaN(numCostPrice) ||
-      numCostPrice <= 0 ||
-      isNaN(numSalesPrice) ||
-      numSalesPrice <= 0 ||
-      isNaN(numUserOperations1) ||
-      numUserOperations1 < 0 ||
-      isNaN(numUserOperations2) ||
-      numUserOperations2 < 0 ||
-      isNaN(numReturnRate) ||
-      numReturnRate <= 0
-    ) {
-      return undefined;
-    }
-
-    //退货率不能为100%
-    if (numReturnRate == 1) returnRate = 0.3;
-
-    let priceInfo = this._priceConfig.find((item) => item.brandSN === brandSN);
-    if (!priceInfo) {
-      throw new Error("没有找到品牌SN【" + brandSN + "】的价格信息，请核实！");
-    }
-
-    const packagingFee = priceInfo.packagingFee; //发货打包费
-    const shippingCost = priceInfo.shippingCost; //发货运费
-    const returnProcessingFee = priceInfo.returnProcessingFee; //退货整理费
-    const vipDiscountRate = priceInfo.vipDiscountRate; //超V优惠比例
-    const vipDiscountBearingRatio = priceInfo.vipDiscountBearingRatio; //超V优惠商家承担比例
-    const platformCommission = priceInfo.platformCommission; //平台扣点
-    const brandCommission = priceInfo.brandCommission; //品牌回款扣点
-
-    let vipDiscountAmount =
-      salesPrice > 50
-        ? Math.round(salesPrice * vipDiscountRate)
-        : Number((salesPrice * vipDiscountRate).toFixed(1)); //超V优惠金额
-
-    let priceAfterCoupon = salesPrice - userOperations1 - userOperations2;
-
-    let profit =
-      priceAfterCoupon -
-      costPrice -
-      packagingFee -
-      shippingCost -
-      (1 / (1 - returnRate) - 1) * (packagingFee + shippingCost) -
-      returnRate * returnProcessingFee -
-      vipDiscountAmount * vipDiscountBearingRatio -
-      priceAfterCoupon * platformCommission -
-      (priceAfterCoupon * (1 - platformCommission) -
-        vipDiscountAmount * vipDiscountBearingRatio) *
-        brandCommission;
-
-    return Number(profit.toFixed(2));
   }
-
   //计算利润率
   static calProfitRate(
     brandSN,
@@ -2100,7 +2169,7 @@ class ProductPrice {
 
   //查询品牌超V折扣率
   static getVipDiscountRate(brandSN) {
-    let priceInfo = this._priceConfig.find((item) => item.brandSN == brandSN);
+    let priceInfo = this._priceConfig?.find((item) => item.brandSN == brandSN);
     if (priceInfo) return priceInfo.vipDiscountRate;
     return 0;
   }
@@ -2571,7 +2640,7 @@ class Utility {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return `'${year}-${month}-${day}`;
+    return `+${year}-${month}-${day}`;
   }
 
   //生成昨天日期的字符串格式
@@ -2583,7 +2652,7 @@ class Utility {
     const month = String(yesterday.getMonth() + 1).padStart(2, "0");
     const day = String(yesterday.getDate()).padStart(2, "0");
 
-    return `'${year}-${month}-${day}`;
+    return `+${year}-${month}-${day}`;
   }
 
   //检查单字段重复项目
