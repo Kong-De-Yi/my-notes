@@ -1838,8 +1838,8 @@ class ProductPrice {
         return undefined;
       }
 
-      // 修复漏洞：如果退货率为100%或者0%，重置为默认值
-      if (params.returnRate == 1 || params.returnRate == 0) {
+      // 退货率修正：如果退货率为100%或者小于30%，重置为默认值
+      if (params.returnRate == 1 || params.returnRate < 0.3) {
         params.returnRate = 0.3;
       }
 
