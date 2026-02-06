@@ -142,7 +142,6 @@ function UserForm1_CommandButton6_Click() {
 function UserForm1_CommandButton13_Click() {
   try {
     SystemRecord.initializeData();
-    VipshopGoods.initializeData();
     Main.outputReport();
   } catch (err) {
     MsgBox(err.message);
@@ -186,7 +185,6 @@ function UserForm1_CheckBox46_Click() {
 function UserForm1_CommandButton9_Click() {
   try {
     SystemRecord.initializeData();
-    VipshopGoods.initializeData();
     Main.signUpActivity();
   } catch (err) {
     MsgBox(err.message);

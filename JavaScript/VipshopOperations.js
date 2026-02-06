@@ -67,9 +67,12 @@ class Main {
         .join("/");
     });
 
+    //清空常态商品
+    RegularProduct.clear();
+
     //更新系统记录
     SystemRecord.getSystemRecord().updateDateOfRegularProduct =
-      Utility.generateStringOfToday();
+      new Date().toString();
     SystemRecord.updateSystemRecord();
   }
 
@@ -98,7 +101,7 @@ class Main {
 
     //更新系统记录
     SystemRecord.getSystemRecord().updateDateOfProductPrice =
-      Utility.generateStringOfToday();
+      new Date().toString();
     SystemRecord.updateSystemRecord();
   }
 
@@ -227,7 +230,7 @@ class Main {
 
     //更新系统记录
     SystemRecord.getSystemRecord().updateDateOfInventory =
-      Utility.generateStringOfToday();
+      new Date().toString();
     SystemRecord.updateSystemRecord();
   }
 
@@ -321,7 +324,7 @@ class Main {
           if ("+" + findItem.salesDate == Utility.generateStringOfYesterday()) {
             needUpdateSystemRecordOfProductSales = true;
             SystemRecord.getSystemRecord().updateDateOfProductSales =
-              Utility.generateStringOfYesterday();
+              new Date().toString();
           }
         }
       }
@@ -393,7 +396,9 @@ class Main {
     }
 
     if (
-      systemRecord.updateDateOfProductPrice != Utility.generateStringOfToday()
+      !Utility.isToday(
+        new Date(Date.parse(systemRecord.updateDateOfProductPrice)),
+      )
     ) {
       if (
         MsgBox(
@@ -406,7 +411,9 @@ class Main {
     }
 
     if (
-      systemRecord.updateDateOfRegularProduct != Utility.generateStringOfToday()
+      !Utility.isToday(
+        new Date(Date.parse(systemRecord.updateDateOfRegularProduct)),
+      )
     ) {
       if (
         MsgBox(
@@ -418,7 +425,9 @@ class Main {
         throw new Error("请更新【常态商品】后再重试!");
     }
 
-    if (systemRecord.updateDateOfInventory != Utility.generateStringOfToday()) {
+    if (
+      !Utility.isToday(new Date(Date.parse(systemRecord.updateDateOfInventory)))
+    ) {
       if (
         MsgBox(
           "【商品库存】今日尚未更新,是否继续生成报表?",
@@ -430,8 +439,9 @@ class Main {
     }
 
     if (
-      systemRecord.updateDateOfProductSales !=
-      Utility.generateStringOfYesterday()
+      !Utility.isToday(
+        new Date(Date.parse(systemRecord.updateDateOfProductSales)),
+      )
     ) {
       if (
         MsgBox(
@@ -527,6 +537,9 @@ class Main {
     ]);
 
     let keyToTitle = VipshopGoods.getFullKeyToTitle();
+
+    //加载货号总表数据
+    VipshopGoods.initializeData();
     //根据筛选条件获取货号总表数据
     let allVipshopGoods =
       VipshopGoods.filterVipshopGoodsByMultiCondition(selectOption);
@@ -605,14 +618,16 @@ class Main {
   }
 
   static signUpActivity() {
-    /*1.确保常态商品最新
+    /*1.确保常态商品和近7天数据为最新
       2.验证利润
       3.默认只提报上架商品
       4.可单独筛选商品提报
       5.校验同款不同价
       6.检验同款不同券
-      7.商品价格表中有价格信息
+      7.商品价格表中有价格信息，并且价格信息填写正常
       8.白金价和到手价不一致问题
+      9.考虑提报率
+      10.检查是否破价
   */
     let signUpRate = 100;
 
@@ -633,29 +648,38 @@ class Main {
     }
 
     //常态商品过期强制更新
-    let clearTimeOfRegularProduct = Date.parse(
-      SystemRecord.getSystemRecord().clearTimeOfRegularProduct,
-    );
-    let diffTime = (new Date() - clearTimeOfRegularProduct) / 1000 / 60 / 60;
-    if (diffTime > 2) {
-      if (
-        MsgBox(
-          "常态商品数据已过期需要更新，请导入最新的常态商品，选择【是】将清空常态商品！",
-          jsYesNo,
-          "提醒",
-        ) === jsResultYes
-      ) {
-        RegularProduct.clear();
-        SystemRecord.getSystemRecord().clearTimeOfRegularProduct =
-          new Date().toString();
-        SystemRecord.updateSystemRecord();
-      } else {
-        throw new Error("常态商品数据已过期");
-      }
+    const systemRecord = SystemRecord.getSystemRecord();
+
+    // 1. 检查更新日期是否存在
+    if (!systemRecord || !systemRecord.updateDateOfRegularProduct) {
+      throw new Error("未找到常态商品更新日期");
     }
 
-    this.updateRegularProduct();
-    this.updateProductPrice();
+    const updateTimestamp = Date.parse(systemRecord.updateDateOfRegularProduct);
+    const updateDate = new Date(updateTimestamp);
+    const now = new Date();
+
+    // 3. 计算时间差（小时）
+    const diffMs = now - updateDate;
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffHours > 5) {
+      throw new Error(
+        "活动提报需要最新的常态商品数据,请导入最新的常态商品数据后重试！",
+      );
+    }
+
+    if (
+      systemRecord.updateDateOfLast7Days != Utility.generateStringOfLast7Days()
+    ) {
+      throw new Error(
+        "活动提报需要最新的近7天商品销售数据,请导入最新的商品销售数据后重试!",
+      );
+    }
+
+    //加载货号总表和商品价格数据
+    VipshopGoods.initializeData();
+    ProductPrice.initializeData();
 
     //获取需要提报的商品
     let selectOption = Utility.getSelectOption();
@@ -665,7 +689,45 @@ class Main {
     let requiredSignUpVipshopGoods =
       VipshopGoods.filterVipshopGoodsByMultiCondition(selectOption);
 
-    //检查需要提报商品是否都存在商品价格信息
+    let abnormalPriceVipshopGoods = [];
+    //检查需要提报商品是否都存在正确的商品价格信息
+    requiredSignUpVipshopGoods.forEach((item) => {
+      if (item.itemNumber) {
+        let findItem = ProductPrice.findProductPrice({
+          itemNumber: item.itemNumber,
+        });
+        if (!findItem) {
+          item.errReason = "商品价格中未找到该货号";
+          abnormalPriceVipshopGoods.push(item);
+        } else {
+          let itemProfit = ProductPrice.calProfit(
+            item.brandSN,
+            findItem.costPrice,
+            findItem.silverPrice,
+            findItem.userOperations1,
+            findItem.userOperations2,
+            item.rejectAndReturnRateOfLast7Days,
+          );
+
+          //验证最低价是否填写有误
+
+          if (!itemProfit) {
+            item.errReason = "商品价格中数据填写有误";
+            abnormalPriceVipshopGoods.push(item);
+          }
+        }
+      }
+    });
+
+    if (abnormalPriceVipshopGoods.length != 0) {
+      throw new CustomError(
+        "请检查商品价格数据",
+        { itemNumber: "货号", errReason: "异常原因" },
+        abnormalPriceVipshopGoods,
+      );
+    }
+
+    this.updateProductPrice();
   }
 }
 
@@ -2172,7 +2234,6 @@ class SystemRecord {
     updateDateOfRegularProduct: "常态商品更新日期",
     updateDateOfInventory: "商品库存更新日期",
     updateDateOfProductSales: "商品销售更新日期",
-    clearTimeOfRegularProduct: "常态商品清空时间",
   };
 
   static _data = [];
@@ -2371,13 +2432,15 @@ class Utility {
     return result;
   }
 
-  //生成今天日期的字符串格式
-  static generateStringOfToday() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `+${year}-${month}-${day}`;
+  //判断日期是否为今天
+  static isToday(date) {
+    const today = new Date();
+
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
   }
 
   //生成昨天日期的字符串格式
