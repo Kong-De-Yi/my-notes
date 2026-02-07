@@ -34,8 +34,8 @@ class Main {
         item.styleNumber = findItem.styleNumber;
         item.color = findItem.color;
         item.itemStatus = findItem.itemStatus;
-        item.vipshopPrice = findItem.vipshopPrice;
-        item.finalPrice = findItem.finalPrice;
+        item.vipshopPrice = Number(findItem.vipshopPrice);
+        item.finalPrice = Number(findItem.finalPrice);
         item.sellableDays = findItem.sellableDays;
         //商品上架则清空下线原因
         if (item.itemStatus != "商品下线") {
@@ -79,6 +79,7 @@ class Main {
   static updateProductPrice() {
     try {
       ProductPrice.initializeData();
+      ProductPrice.checkData();
     } catch (err) {
       throw err;
     }
@@ -91,11 +92,11 @@ class Main {
       if (findItem) {
         item.designNumber = findItem.designNumber;
         item.picture = findItem.picture;
-        item.costPrice = findItem.costPrice;
-        item.lowestPrice = findItem.lowestPrice;
-        item.silverPrice = findItem.silverPrice;
-        item.userOperations1 = findItem.userOperations1;
-        item.userOperations2 = findItem.userOperations2;
+        item.costPrice = Number(findItem.costPrice);
+        item.lowestPrice = Number(findItem.lowestPrice);
+        item.silverPrice = Number(findItem.silverPrice);
+        item.userOperations1 = Number(findItem.userOperations1 ?? 0);
+        item.userOperations2 = Number(findItem.userOperations2 ?? 0);
       }
     });
 
@@ -617,36 +618,7 @@ class Main {
     }
   }
 
-  static signUpActivity() {
-    /*1.确保常态商品和近7天数据为最新
-      2.验证利润
-      3.默认只提报上架商品
-      4.可单独筛选商品提报
-      5.校验同款不同价
-      6.检验同款不同券
-      7.商品价格表中有价格信息，并且价格信息填写正常
-      8.白金价和到手价不一致问题
-      9.考虑提报率
-      10.检查是否破价
-  */
-    let signUpRate = 100;
-
-    //验证用户选择的活动等级
-    if (!UserForm1.ComboBox3.Value) {
-      throw new Error("请先选择活动价格等级");
-    }
-
-    //验证输入的提报率
-    if (UserForm1.CheckBox46.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit25.Value)) {
-        throw new Error("提报率输入必须是一个有效的数字");
-      }
-      signUpRate = Number(UserForm1.TextEdit25.Value);
-      if (signUpRate > 100 || signUpRate <= 0) {
-        throw new Error("提报率必须在0-100之间");
-      }
-    }
-
+  static checkBeforeSignUp() {
     //常态商品过期强制更新
     const systemRecord = SystemRecord.getSystemRecord();
 
@@ -677,57 +649,165 @@ class Main {
       );
     }
 
-    //加载货号总表和商品价格数据
-    VipshopGoods.initializeData();
-    ProductPrice.initializeData();
+    if (
+      !Utility.isToday(new Date(Date.parse(systemRecord.updateDateOfInventory)))
+    ) {
+      throw new Error(
+        "活动提报需要最新的商品库存数据,请导入最新的商品库存数据后重试!",
+      );
+    }
+  }
 
-    //获取需要提报的商品
+  static signUpActivity() {
+    /*1.确保常态商品和近7天数据为最新
+      10.检查是否破价
+      3.默认只提报上架商品
+      4.可单独筛选商品提报
+      7.商品价格表中有价格信息，并且价格信息填写正常
+      5.校验同款不同价
+       2.验证利润
+       8.白金价和到手价不一致问题
+
+      6.检验同款不同券
+      
+      9.考虑提报率      
+     
+  */
+    let signUpRate = 100;
+
+    //验证用户选择的活动等级
+    if (!UserForm1.ComboBox3.Value) {
+      throw new Error("请先选择活动价格等级");
+    }
+
+    //验证输入的提报率
+    if (UserForm1.CheckBox46.Value) {
+      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit25.Value)) {
+        throw new Error("提报率输入必须是一个有效的数字");
+      }
+      signUpRate = Number(UserForm1.TextEdit25.Value);
+      if (signUpRate > 100 || signUpRate <= 0) {
+        throw new Error("提报率必须在0-100之间");
+      }
+    }
+
+    //活动前检查数据
+    this.checkBeforeSignUp();
+
     let selectOption = Utility.getSelectOption();
     if (Object.keys(selectOption).length === 0) {
       selectOption = { itemStatus: ["商品上线", "部分上线"] };
     }
+
+    //加载货号总表数据
+    VipshopGoods.initializeData();
+    //更新商品价格数据
+    this.updateProductPrice();
+
+    //获取需要提报的商品
     let requiredSignUpVipshopGoods =
       VipshopGoods.filterVipshopGoodsByMultiCondition(selectOption);
 
     let abnormalPriceVipshopGoods = [];
-    //检查需要提报商品是否都存在正确的商品价格信息
-    requiredSignUpVipshopGoods.forEach((item) => {
-      if (item.itemNumber) {
-        let findItem = ProductPrice.findProductPrice({
-          itemNumber: item.itemNumber,
-        });
-        if (!findItem) {
-          item.errReason = "商品价格中未找到该货号";
+
+    //检查需要提报商品是否都存在商品价格信息并验证是否已破价
+    for (const item of requiredSignUpVipshopGoods) {
+      if (!item.itemNumber) continue; //忽略无货号的商品
+
+      let findItem = ProductPrice.findProductPrice({
+        itemNumber: item.itemNumber,
+      });
+      if (findItem) {
+        if (item.silverPrice < item.lowestPrice) {
+          item.errReason = "商品白金价低于最低价，已破价！";
           abnormalPriceVipshopGoods.push(item);
-        } else {
-          let itemProfit = ProductPrice.calProfit(
-            item.brandSN,
-            findItem.costPrice,
-            findItem.silverPrice,
-            findItem.userOperations1,
-            findItem.userOperations2,
-            item.rejectAndReturnRateOfLast7Days,
-          );
-
-          //验证最低价是否填写有误
-
-          if (!itemProfit) {
-            item.errReason = "商品价格中数据填写有误";
-            abnormalPriceVipshopGoods.push(item);
-          }
         }
+      } else {
+        item.errReason = "商品价格中未找到该货号！";
+        abnormalPriceVipshopGoods.push(item);
       }
-    });
+    }
 
     if (abnormalPriceVipshopGoods.length != 0) {
       throw new CustomError(
-        "请检查商品价格数据",
+        "请检查商品价格数据！",
         { itemNumber: "货号", errReason: "异常原因" },
         abnormalPriceVipshopGoods,
       );
     }
 
-    this.updateProductPrice();
+    let styleSilverPriceMap = new Map();
+    for (const item of requiredSignUpVipshopGoods) {
+      if (!item.itemNumber) continue; //忽略无货号的商品
+      item.warnMessage = [];
+      //检查同款不同价
+      if (styleSilverPriceMap.has(item.styleNumber)) {
+        if (styleSilverPriceMap.get(item.styleNumber) != item.silverPrice) {
+          item.warnMessage.push("同款不同价");
+        }
+      } else {
+        styleSilverPriceMap.set(item.styleNumber, item.silverPrice);
+      }
+
+      //检查白金价是否小于到手价
+      if (item.silverPrice < item.finalPrice) {
+        item.warnMessage.push("白金价小于到手价");
+      }
+
+      //验证利润:1.新品毛利率50% 2.利润款毛利率>35%，毛利>5元 3. 引流款毛利率和毛利>0
+      item.activityProfit = ProductPrice.calProfit(
+        item.brandSN,
+        item.costPrice,
+        item.silverPrice,
+        item.userOperations1,
+        item.userOperations2,
+        item.rejectAndReturnRateOfLast7Days ?? 0.3,
+      );
+      item.activityProfitRate = Number(
+        (item.activityProfit / item.costPrice).toFixed(5),
+      );
+
+      //新品
+      if (!item.salesAge || item.salesAge <= 15) {
+        if (item.activityProfit < 5) {
+          item.warnMessage.push("售龄15天内的新品毛利建议在5元以上");
+        }
+        if (item.activityProfitRate < 0.5) {
+          item.warnMessage.push("售龄15天内的新品毛利率建议在50%以上");
+        }
+      } else {
+        switch (item.marketingPositioning) {
+          case "引流款":
+            if (item.activityProfit < 0) {
+              item.warnMessage.push("引流款的毛利建议在0元以上");
+            }
+            break;
+
+          case "清仓款":
+            if (item.generalGoodsTotalInventory > 1) {
+              item.warnMessage.push("清仓款请解绑组合装");
+            }
+            break;
+
+          default:
+            if (item.activityProfit < 5) {
+              item.warnMessage.push("利润款的毛利建议在5元以上");
+            }
+            if (item.activityProfitRate < 0.3) {
+              item.warnMessage.push("利润款的毛利率建议在35%以上");
+            }
+            break;
+        }
+      }
+
+      //根据提报率重新筛选要提报的商品
+      if (UserForm1.CheckBox46.Value) {
+        //计算需要提报的商品数
+        // let finalSignUpVipshopGoodsCount = requiredSignUpVipshopGoods.length;
+        //优先清仓
+        //优先新品
+      }
+    }
   }
 }
 
@@ -1771,6 +1851,69 @@ class ProductPrice {
     }
   }
 
+  //检查价格数据录入是否正确
+  static checkData() {
+    const abnormalProductPrice = [];
+
+    for (const item of this._data) {
+      if (!item.itemNumber) continue;
+
+      const {
+        costPrice,
+        lowestPrice,
+        silverPrice,
+        userOperations1,
+        userOperations2,
+      } = item;
+      const ops1 = userOperations1 ?? 0;
+      const ops2 = userOperations2 ?? 0;
+
+      const requiredProps = [costPrice, lowestPrice, silverPrice];
+      const hasRequired = Utility.validateRequired(requiredProps);
+
+      let hasError = false;
+      let errReason = "";
+
+      if (!hasRequired) {
+        hasError = true;
+        errReason = "没有填写成本价/最低价/白金价";
+      } else {
+        // 只有必填项通过时才验证数值
+        const numberProps = [costPrice, lowestPrice, silverPrice, ops1, ops2];
+        const costPriceNum = Number(costPrice);
+        const lowestPriceNum = Number(lowestPrice);
+        const silverPriceNum = Number(silverPrice);
+        const ops1Num = Number(ops1);
+        const ops2Num = Number(ops2);
+
+        if (
+          !Utility.validateIsNumber(numberProps) ||
+          costPriceNum <= 0 ||
+          lowestPriceNum <= 0 ||
+          silverPriceNum <= 0 ||
+          ops1Num < 0 ||
+          ops2Num < 0
+        ) {
+          hasError = true;
+          errReason = "成本价/最低价/白金价/中台1/中台2数据填写不正确";
+        }
+      }
+
+      if (hasError) {
+        item.errReason = errReason;
+        abnormalProductPrice.push(item);
+      }
+    }
+
+    if (abnormalProductPrice.length > 0) {
+      throw new CustomError(
+        "商品价格数据异常",
+        { itemNumber: "货号", errReason: "错误原因" },
+        abnormalProductPrice,
+      );
+    }
+  }
+
   static getWsName() {
     return this._wsName;
   }
@@ -1789,6 +1932,13 @@ class ProductPrice {
     return undefined;
   }
 
+  //查询品牌超V折扣率
+  static getVipDiscountRate(brandSN) {
+    let priceInfo = this._priceConfig?.find((item) => item.brandSN == brandSN);
+    if (priceInfo) return priceInfo.vipDiscountRate;
+    return 0;
+  }
+
   //计算利润
   static calProfit(
     brandSN,
@@ -1801,36 +1951,35 @@ class ProductPrice {
     try {
       // 1. 基础参数验证
       const requiredParams = [brandSN, costPrice, salesPrice];
-      if (
-        requiredParams.some(
-          (param) =>
-            param === null ||
-            param === undefined ||
-            param === "" ||
-            (typeof param === "string" && param.trim() === ""),
-        )
-      ) {
+      if (!Utility.validateRequired(requiredParams)) {
         return undefined;
       }
 
-      // 2. 转换为数字并验证
+      // 2. 验证是否为正确的数字
+      const isNumbers = [
+        costPrice,
+        salesPrice,
+        userOperations1 ?? 0,
+        userOperations2 ?? 0,
+        returnRate ?? 0.3,
+      ];
+      if (!Utility.validateIsNumber(isNumbers)) {
+        return undefined;
+      }
+
       const params = {
-        costPrice: parseFloat(costPrice),
-        salesPrice: parseFloat(salesPrice),
-        userOperations1: parseFloat(userOperations1),
-        userOperations2: parseFloat(userOperations2),
-        returnRate: parseFloat(returnRate) || 0.3,
+        costPrice: Number(costPrice),
+        salesPrice: Number(salesPrice),
+        userOperations1: Number(userOperations1 ?? 0),
+        userOperations2: Number(userOperations2 ?? 0),
+        returnRate: Number(returnRate ?? 0.3),
       };
 
-      // 验证数值有效性
+      // 验证数值范围
       if (
-        isNaN(params.costPrice) ||
         params.costPrice <= 0 ||
-        isNaN(params.salesPrice) ||
         params.salesPrice <= 0 ||
-        isNaN(params.userOperations1) ||
         params.userOperations1 < 0 ||
-        isNaN(params.userOperations2) ||
         params.userOperations2 < 0 ||
         params.returnRate < 0 ||
         params.returnRate > 1 // 退货率应为0-1之间
@@ -1936,6 +2085,7 @@ class ProductPrice {
       return undefined;
     }
   }
+
   //计算利润率
   static calProfitRate(
     brandSN,
@@ -1960,11 +2110,13 @@ class ProductPrice {
     }
   }
 
-  //查询品牌超V折扣率
-  static getVipDiscountRate(brandSN) {
-    let priceInfo = this._priceConfig?.find((item) => item.brandSN == brandSN);
-    if (priceInfo) return priceInfo.vipDiscountRate;
-    return 0;
+  //计算活动价
+  static calProductActivityPrice(silverPrice) {
+    const fourthActPrice = Number(silverPrice); //4级活动价
+    const thirdActPrice = (fourthActPrice / 0.9 + 0.06).toFixed(1); //3级活动价
+    const secondActPrice = (thirdActPrice / 0.95 + 0.06).toFixed(1); //2级活动价
+    const firstActPrice = (secondActPrice / 0.95 + 0.06).toFixed(1); //1级活动价
+    return { firstActPrice, secondActPrice, thirdActPrice, fourthActPrice };
   }
 
   toString() {
@@ -2471,6 +2623,44 @@ class Utility {
     });
 
     return duplicates;
+  }
+
+  //验证数据不为空
+  static validateRequired(requiredValues) {
+    if (!Array.isArray(requiredValues) || requiredValues.length === 0) {
+      return false;
+    }
+
+    return requiredValues.every(
+      (value) =>
+        value != null && // 排除 null 和 undefined
+        typeof value !== "boolean" && // 排除布尔值
+        value !== "" && // 排除空字符串
+        (typeof value !== "string" || value.trim() !== ""), // 排除空格字符串
+    );
+  }
+
+  //验证数据可否转化为数字
+  static validateIsNumber(values) {
+    if (!Array.isArray(values) || values.length === 0) {
+      return false;
+    }
+
+    return values.every((value) => {
+      // 不允许 undefined、null
+      if (value == null) {
+        return false;
+      }
+
+      // 排除布尔值
+      if (typeof value === "boolean") {
+        return false;
+      }
+
+      // 检查是否为有效数字
+      const num = Number(value);
+      return !isNaN(num) && isFinite(num);
+    });
   }
 
   //获取货号筛选选项
