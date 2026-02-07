@@ -164,23 +164,6 @@ function UserForm1_CheckBox11_Click() {
   }
 }
 
-//设置提报率
-function UserForm1_CheckBox46_Click() {
-  if (UserForm1.CheckBox46.Value) {
-    UserForm1.Label68.Visible = true;
-    UserForm1.Label70.Visible = true;
-    UserForm1.TextEdit25.Visible = true;
-    UserForm1.OptionButton5.Enabled = true;
-    UserForm1.OptionButton6.Enabled = true;
-  } else {
-    UserForm1.Label68.Visible = false;
-    UserForm1.Label70.Visible = false;
-    UserForm1.TextEdit25.Visible = false;
-    UserForm1.OptionButton5.Enabled = false;
-    UserForm1.OptionButton6.Enabled = false;
-  }
-}
-
 //平台活动提报
 function UserForm1_CommandButton9_Click() {
   try {

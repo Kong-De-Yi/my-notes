@@ -670,48 +670,37 @@ class Main {
 
       6.检验同款不同券
       
-      9.考虑提报率      
+        
      
   */
-    let signUpRate = 100;
 
     //验证用户选择的活动等级
     if (!UserForm1.ComboBox3.Value) {
       throw new Error("请先选择活动价格等级");
     }
 
-    //验证输入的提报率
-    if (UserForm1.CheckBox46.Value) {
-      if (!/^-?\d+(\.\d+)?$/.test(UserForm1.TextEdit25.Value)) {
-        throw new Error("提报率输入必须是一个有效的数字");
-      }
-      signUpRate = Number(UserForm1.TextEdit25.Value);
-      if (signUpRate > 100 || signUpRate <= 0) {
-        throw new Error("提报率必须在0-100之间");
-      }
-    }
-
-    //活动前检查数据
+    //活动前检查数据是否过期
     this.checkBeforeSignUp();
-
-    let selectOption = Utility.getSelectOption();
-    if (Object.keys(selectOption).length === 0) {
-      selectOption = { itemStatus: ["商品上线", "部分上线"] };
-    }
 
     //加载货号总表数据
     VipshopGoods.initializeData();
     //更新商品价格数据
     this.updateProductPrice();
 
+    let allVipshopGoods = VipshopGoods.filterVipshopGoods();
+
     //获取需要提报的商品
+    let selectOption = Utility.getSelectOption();
+    if (Object.keys(selectOption).length === 0) {
+      selectOption = { itemStatus: ["商品上线", "部分上线"] };
+    }
+
     let requiredSignUpVipshopGoods =
       VipshopGoods.filterVipshopGoodsByMultiCondition(selectOption);
 
     let abnormalPriceVipshopGoods = [];
-
-    //检查需要提报商品是否都存在商品价格信息并验证是否已破价
-    for (const item of requiredSignUpVipshopGoods) {
+    //检查所有商品是否都存在商品价格信息并验证是否已破价
+    for (const item of allVipshopGoods) {
       if (!item.itemNumber) continue; //忽略无货号的商品
 
       let findItem = ProductPrice.findProductPrice({
@@ -737,7 +726,7 @@ class Main {
     }
 
     let styleSilverPriceMap = new Map();
-    for (const item of requiredSignUpVipshopGoods) {
+    for (const item of allVipshopGoods) {
       if (!item.itemNumber) continue; //忽略无货号的商品
       item.warnMessage = [];
       //检查同款不同价
@@ -754,8 +743,8 @@ class Main {
         item.warnMessage.push("白金价小于到手价");
       }
 
-      //验证利润:1.新品毛利率50% 2.利润款毛利率>35%，毛利>5元 3. 引流款毛利率和毛利>0
-      item.activityProfit = ProductPrice.calProfit(
+      //验证白金价活动利润:1.新品毛利率50% 2.利润款毛利率>35%，毛利>5元 3. 引流款毛利率和毛利>0
+      let silverPriceProfit = ProductPrice.calProfit(
         item.brandSN,
         item.costPrice,
         item.silverPrice,
@@ -763,23 +752,23 @@ class Main {
         item.userOperations2,
         item.rejectAndReturnRateOfLast7Days ?? 0.3,
       );
-      item.activityProfitRate = Number(
-        (item.activityProfit / item.costPrice).toFixed(5),
+      let silverPriceProfitRate = Number(
+        (silverPriceProfit / item.costPrice).toFixed(5),
       );
 
       //新品
       if (!item.salesAge || item.salesAge <= 15) {
-        if (item.activityProfit < 5) {
-          item.warnMessage.push("售龄15天内的新品毛利建议在5元以上");
+        if (silverPriceProfit < 5) {
+          item.warnMessage.push("售龄15天内的新品白金价毛利建议在5元以上");
         }
-        if (item.activityProfitRate < 0.5) {
-          item.warnMessage.push("售龄15天内的新品毛利率建议在50%以上");
+        if (silverPriceProfitRate < 0.5) {
+          item.warnMessage.push("售龄15天内的新品白金价毛利率建议在50%以上");
         }
       } else {
         switch (item.marketingPositioning) {
           case "引流款":
-            if (item.activityProfit < 0) {
-              item.warnMessage.push("引流款的毛利建议在0元以上");
+            if (silverPriceProfitRate < 0.05) {
+              item.warnMessage.push("引流款的白金价毛利率建议在5%以上");
             }
             break;
 
@@ -790,24 +779,71 @@ class Main {
             break;
 
           default:
-            if (item.activityProfit < 5) {
-              item.warnMessage.push("利润款的毛利建议在5元以上");
+            if (silverPriceProfit < 5) {
+              item.warnMessage.push("利润款的白金价毛利建议在5元以上");
             }
-            if (item.activityProfitRate < 0.3) {
-              item.warnMessage.push("利润款的毛利率建议在35%以上");
+            if (silverPriceProfitRate < 0.35) {
+              item.warnMessage.push("利润款的白金价毛利率建议在35%以上");
             }
-            break;
         }
       }
 
-      //根据提报率重新筛选要提报的商品
-      if (UserForm1.CheckBox46.Value) {
-        //计算需要提报的商品数
-        // let finalSignUpVipshopGoodsCount = requiredSignUpVipshopGoods.length;
-        //优先清仓
-        //优先新品
+      const productActivityPrice = ProductPrice.calProductActivityPrice(
+        item.silverPrice,
+      );
+
+      switch (UserForm1.ComboBox3.Value) {
+        case " 直通车":
+          item.activityPrice = productActivityPrice.firstActPrice;
+          break;
+        case "黄金等级":
+          item.activityPrice = productActivityPrice.secondActPrice;
+          break;
+        case "TOP3":
+          item.activityPrice = productActivityPrice.thirdActPrice;
+          break;
+        case "白金等级":
+          item.activityPrice = productActivityPrice.fourthActPrice;
+          break;
+        case "白金限量":
+          item.activityPrice = productActivityPrice.fifthActPrice;
       }
     }
+    let outputData = [];
+    let keyToTitle = {};
+
+    if (UserForm1.ComboBox3.Value == "白金限量") {
+      for (let value of styleSilverPriceMap.keys()) {
+        let outputItem = VipshopGoods.findVipshopGoods({
+          styleNumber: value,
+        });
+        let warnMessage = [];
+        let findItems = VipshopGoods.filterVipshopGoods({ styleNumber: value });
+        for (let item of findItems) {
+          if (item.warnMessage) {
+            warnMessage.push(...item.warnMessage);
+          }
+        }
+        outputItem.warnMessage = warnMessage.join("/");
+
+        outputData.push(outputItem);
+      }
+
+      keyToTitle = {
+        P_SPU: "P_SPU",
+        activityPrice: "活动价",
+        warnMessage: "活动提醒",
+      };
+    }
+
+    Workbooks(DAO._wbName).Sheets(VipshopGoods.getWsName()).Copy();
+    let newWb = ActiveWorkbook;
+
+    newWb.Worksheets.Add();
+    let newSt = ActiveSheet;
+    newSt.Name = "活动提报";
+
+    DAO.updateWorksheet("活动提报", outputData, keyToTitle, newWb);
   }
 }
 
@@ -2112,11 +2148,18 @@ class ProductPrice {
 
   //计算活动价
   static calProductActivityPrice(silverPrice) {
+    const fifthActPrice = Math.floor(Number(silverPrice) * 0.95); //5级活动
     const fourthActPrice = Number(silverPrice); //4级活动价
     const thirdActPrice = (fourthActPrice / 0.9 + 0.06).toFixed(1); //3级活动价
     const secondActPrice = (thirdActPrice / 0.95 + 0.06).toFixed(1); //2级活动价
     const firstActPrice = (secondActPrice / 0.95 + 0.06).toFixed(1); //1级活动价
-    return { firstActPrice, secondActPrice, thirdActPrice, fourthActPrice };
+    return {
+      firstActPrice,
+      secondActPrice,
+      thirdActPrice,
+      fourthActPrice,
+      fifthActPrice,
+    };
   }
 
   toString() {
