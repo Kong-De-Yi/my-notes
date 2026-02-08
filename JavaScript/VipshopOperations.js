@@ -618,7 +618,7 @@ class Main {
     }
   }
 
-  static checkBeforeSignUp() {
+  static checkUpdateBeforeSignUp() {
     //常态商品过期强制更新
     const systemRecord = SystemRecord.getSystemRecord();
 
@@ -669,9 +669,7 @@ class Main {
        8.白金价和到手价不一致问题
 
       6.检验同款不同券
-      
-        
-     
+ 
   */
 
     //验证用户选择的活动等级
@@ -680,14 +678,10 @@ class Main {
     }
 
     //活动前检查数据是否过期
-    this.checkBeforeSignUp();
+    this.checkUpdateBeforeSignUp();
 
     //加载货号总表数据
     VipshopGoods.initializeData();
-    //更新商品价格数据
-    this.updateProductPrice();
-
-    let allVipshopGoods = VipshopGoods.filterVipshopGoods();
 
     //获取需要提报的商品
     let selectOption = Utility.getSelectOption();
@@ -698,8 +692,18 @@ class Main {
     let requiredSignUpVipshopGoods =
       VipshopGoods.filterVipshopGoodsByMultiCondition(selectOption);
 
-    let abnormalPriceVipshopGoods = [];
+    if (requiredSignUpVipshopGoods.length == 0) {
+      throw new Error("没有需要提报的商品");
+    }
+
+    //更新商品价格数据
+    this.updateProductPrice();
+
+    let allVipshopGoods = VipshopGoods.filterVipshopGoods();
+
     //检查所有商品是否都存在商品价格信息并验证是否已破价
+    let abnormalPriceVipshopGoods = [];
+
     for (const item of allVipshopGoods) {
       if (!item.itemNumber) continue; //忽略无货号的商品
 
@@ -725,22 +729,45 @@ class Main {
       );
     }
 
+    //统计是否存在同款不同价
     let styleSilverPriceMap = new Map();
     for (const item of allVipshopGoods) {
       if (!item.itemNumber) continue; //忽略无货号的商品
-      item.warnMessage = [];
-      //检查同款不同价
       if (styleSilverPriceMap.has(item.styleNumber)) {
-        if (styleSilverPriceMap.get(item.styleNumber) != item.silverPrice) {
-          item.warnMessage.push("同款不同价");
+        let vipshopStyle = styleSilverPriceMap.get(item.styleNumber);
+        vipshopStyle.vipshopGoodsCount++;
+        vipshopStyle.totalSilverPrice += item.silverPrice;
+        vipshopStyle.styleTotalSales += item.totalSales;
+
+        let averageSilverPrice =
+          vipshopStyle.totalSilverPrice / vipshopStyle.vipshopGoodsCount;
+
+        if (item.silverPrice != averageSilverPrice) {
+          vipshopStyle.warnMessage = "同款不同价";
         }
       } else {
-        styleSilverPriceMap.set(item.styleNumber, item.silverPrice);
+        styleSilverPriceMap.set(item.styleNumber, {
+          vipshopGoodsCount: 1,
+          totalSilverPrice: item.silverPrice,
+          totalSales: item.totalSales,
+        });
+      }
+    }
+
+    //校验货号维度
+    for (const item of allVipshopGoods) {
+      if (!item.itemNumber) continue; //忽略无货号的商品
+
+      item.warnMessage = [];
+
+      //检查同款不同价
+      if (styleSilverPriceMap.get(item.styleNumber).warnMessage) {
+        item.warnMessage.push("同款不同价");
       }
 
       //检查白金价是否小于到手价
       if (item.silverPrice < item.finalPrice) {
-        item.warnMessage.push("白金价小于到手价");
+        item.warnMessage.push("白金价小于到手价，需核实到手价价格等级");
       }
 
       //验证白金价活动利润:1.新品毛利率50% 2.利润款毛利率>35%，毛利>5元 3. 引流款毛利率和毛利>0
@@ -750,11 +777,16 @@ class Main {
         item.silverPrice,
         item.userOperations1,
         item.userOperations2,
-        item.rejectAndReturnRateOfLast7Days ?? 0.3,
+        item.rejectAndReturnRateOfLast7Days,
       );
       let silverPriceProfitRate = Number(
         (silverPriceProfit / item.costPrice).toFixed(5),
       );
+
+      //判断是否能正常计算利润
+      if (!silverPriceProfit) {
+        item.warnMessage.push("无法计算白金价毛利和毛利率");
+      }
 
       //新品
       if (!item.salesAge || item.salesAge <= 15) {
@@ -788,53 +820,116 @@ class Main {
         }
       }
 
+      //计算活动价格
       const productActivityPrice = ProductPrice.calProductActivityPrice(
         item.silverPrice,
       );
 
       switch (UserForm1.ComboBox3.Value) {
-        case " 直通车":
+        case "直通车":
+          item.activityLevel = "直通车";
           item.activityPrice = productActivityPrice.firstActPrice;
           break;
         case "黄金等级":
+          item.activityLevel = "黄金等级";
           item.activityPrice = productActivityPrice.secondActPrice;
           break;
         case "TOP3":
+          item.activityLevel = "TOP3";
           item.activityPrice = productActivityPrice.thirdActPrice;
           break;
         case "白金等级":
+          item.activityLevel = "白金等级";
           item.activityPrice = productActivityPrice.fourthActPrice;
           break;
         case "白金限量":
+          item.activityLevel = "白金限量";
+          item.isLimited = "是";
+          item.limitedCount = 500;
+          item.limitedCountForUser = 10;
+          item.canPromote = "是";
           item.activityPrice = productActivityPrice.fifthActPrice;
       }
+
+      item.activityProfit = ProductPrice.calProfit(
+        item.brandSN,
+        item.costPrice,
+        item.activityPrice,
+        item.userOperations1,
+        item.userOperations2,
+        item.rejectAndReturnRateOfLast7Days,
+      );
     }
+    item.activityProfitRate = Number(
+      (item.activityProfit / item.costPrice).toFixed(5),
+    );
+
+    let keyToTitle = {
+      activityLevel: "活动等级",
+      activityPrice: "活动价",
+      activityProfit: "活动毛利",
+      activityProfitRate: "活动毛利率",
+      salesAge: "售龄",
+      isOutOfStock: "是否断码",
+      finishedGoodsTotalInventory: "成品库存",
+      generalGoodsTotalInventory: "通货库存",
+      clickThroughRateOfLast7Days: "近7天点击率",
+      addToCartRateOfLast7Days: "近7天加购率",
+      purchaseRateOfLast7Days: "近7天转化率",
+    };
+    let activityKeyToTitle = {};
     let outputData = [];
-    let keyToTitle = {};
 
     if (UserForm1.ComboBox3.Value == "白金限量") {
-      for (let value of styleSilverPriceMap.keys()) {
+      for (let item of requiredSignUpVipshopGoods) {
         let outputItem = VipshopGoods.findVipshopGoods({
-          styleNumber: value,
+          styleNumber: item.styleNumber,
         });
         let warnMessage = [];
-        let findItems = VipshopGoods.filterVipshopGoods({ styleNumber: value });
+        let findItems = VipshopGoods.filterVipshopGoods({
+          styleNumber: item.styleNumber,
+        });
         for (let item of findItems) {
-          if (item.warnMessage) {
-            warnMessage.push(...item.warnMessage);
+          if (item.warnMessage.length != 0) {
+            for (let value of item.warnMessage) {
+              if (!warnMessage.includes(value) && value) {
+                warnMessage.push(value);
+              }
+            }
           }
         }
-        outputItem.warnMessage = warnMessage.join("/");
+        if (warnMessage.length != 0) {
+          outputItem.styleWarnMessage = warnMessage.join("/");
+        }
 
-        outputData.push(outputItem);
+        let styleTotalSales = styleSilverPriceMap.get(
+          outputItem.styleNumber,
+        ).styleTotalSales;
+
+        if (styleTotalSales) {
+          outputItem.styleTotalSales = styleTotalSales;
+        }
+        if (!outputData.find((item) => item.P_SPU == outputItem.P_SPU)) {
+          outputData.push(outputItem);
+        }
       }
 
-      keyToTitle = {
-        P_SPU: "P_SPU",
-        activityPrice: "活动价",
-        warnMessage: "活动提醒",
+      activityKeyToTitle = {
+        styleTotalSales: "销量总计",
+        styleWarnMessage: "活动警告",
+        signUpNumber: "报名编号",
+        P_SPU: "SPU_ID",
+        sizeNumber: "尺码ID",
+        activityPrice: "快抢价",
+        isLimited: "是否限量",
+        limitedCount: "限量件数",
+        limitedCountForUser: "每用户限购数",
+        canPromote: "是否可外推",
+        applyReason: "申请理由",
       };
     }
+
+    Object.assign(keyToTitle, activityKeyToTitle);
 
     Workbooks(DAO._wbName).Sheets(VipshopGoods.getWsName()).Copy();
     let newWb = ActiveWorkbook;
